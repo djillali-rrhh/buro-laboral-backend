@@ -13,3 +13,9 @@ Route::get('/saludo', function () {
         'mensaje' => 'Hello World'
     ]);
 });
+
+Route::get('/test', function () {
+    return response()->json([
+        'mensaje' => 'test'
+    ]);
+});
