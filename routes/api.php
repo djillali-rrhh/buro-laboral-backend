@@ -19,3 +19,9 @@ Route::get('/test', function () {
         'mensaje' => 'test'
     ]);
 });
+
+Route::get('/test2', function () {
+    return response()->json([
+        'mensaje' => 'test2'
+    ]);
+});
