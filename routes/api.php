@@ -1,15 +1,14 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
+/**
+ * Carga dinámica de archivos de rutas dentro de /routes/API/v1.
+ */
+Route::prefix('v1')->group(function () {
+    $path = base_path('routes/API/v1');
 
-
-Route::get('/saludo', function () {
-    return response()->json([
-        'mensaje' => 'Hello World'
-    ]);
+    foreach (glob("$path/*.php") as $routeFile) {
+        require $routeFile;
+    }
 });
