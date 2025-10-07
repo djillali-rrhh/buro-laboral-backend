@@ -1,0 +1,17 @@
+services:
+  buro-laboral-backend:
+    build: .
+    restart: always
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+
+    container_name: ${CONTAINER_NAME}
+    ports:
+      - "8000:8000"
+    networks:
+      - buro-laboral-network
+
+networks:
+  buro-laboral-network:
+    driver: bridge
+    name: buro-laboral-network
