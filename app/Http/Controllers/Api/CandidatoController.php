@@ -13,17 +13,16 @@ class CandidatoController extends Controller
     use ApiResponse;
 
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource with related work history.
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
-        $query = Candidato::query();
+        $query = Candidato::with('laborales');
 
         if ($request->has('nombre_completo')) {
             $nombreCompleto = $request->query('nombre_completo');
-            
             $query->where(DB::raw("CONCAT(Nombres, ' ', Apellido_Paterno, ' ', Apellido_Materno)"), 'LIKE', "%{$nombreCompleto}%");
         }
 
@@ -45,10 +44,12 @@ class CandidatoController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource with related work history.
      */
     public function show(Candidato $candidato)
     {
+        $candidato->load('laborales');
+        
         return $this->successResponse($candidato);
     }
 }
