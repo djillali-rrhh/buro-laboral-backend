@@ -13,13 +13,13 @@ class CandidatoController extends Controller
     use ApiResponse;
 
     /**
-     * Display a listing of the resource with related work history.
-     * @param  \Illuminate\Http\Request  $request
+     * Display a listing of the resource.
+     * @param  \Illuminate\Http\Request
      * @return \Illuminate\Http\Response
      */
     public function index(Request $request)
     {
-        $query = Candidato::with('laborales');
+        $query = Candidato::query()->with(['laborales', 'investigacionLaboral']);
 
         if ($request->has('nombre_completo')) {
             $nombreCompleto = $request->query('nombre_completo');
@@ -40,16 +40,27 @@ class CandidatoController extends Controller
 
         $candidatos = $query->paginate();
 
+        if ($candidatos->isEmpty()) {
+            return $this->successResponse($candidatos, 'No se encontraron candidatos con los criterios de búsqueda.');
+        }
+
         return $this->successResponse($candidatos);
     }
 
     /**
-     * Display the specified resource with related work history.
+     * Display the specified resource.
      */
-    public function show(Candidato $candidato)
+    public function show(string $id)
     {
-        $candidato->load('laborales');
-        
+        $candidato = Candidato::find($id);
+
+        if (!$candidato) {
+            return $this->errorResponse('El candidato solicitado no existe.', 404);
+        }
+
+        $candidato->load(['laborales', 'investigacionLaboral']);
+
         return $this->successResponse($candidato);
     }
 }
+
