@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\CandidatoController;
+use App\Http\Controllers\Api\V1\CandidatoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/candidatos', [CandidatoController::class, 'index']);
