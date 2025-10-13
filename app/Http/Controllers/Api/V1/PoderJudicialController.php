@@ -20,7 +20,7 @@ class PoderJudicialController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login()
+    public function account()
     {
         $response = Http::withHeaders([
             'apikey' => config('services.poder_judicial.secret'),
@@ -30,12 +30,12 @@ class PoderJudicialController extends Controller
             $data = $response->json();
             return response()->json([
                 'status' => true,
-                'message' => 'Login exitoso.',
+                'message' => 'Verificación de cuenta exitosa.',
                 'data' => $data
             ]);
         }
 
-        return $this->errorResponse('Error al iniciar sesión.', $response->status());
+        return $this->errorResponse('Error al verificar la cuenta.', $response->status());
     }
 
     /**
