@@ -35,7 +35,7 @@ Route::prefix('poder-judicial')->name('poderjudicial.')->group(function () {
     /**
      * AUTENTICACIÓN
      */
-    Route::get('/account', [PoderJudicialController::class, 'login'])
+    Route::get('/account', [PoderJudicialController::class, 'account'])
         ->name('account');
 
     /**
