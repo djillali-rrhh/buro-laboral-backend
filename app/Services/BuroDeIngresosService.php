@@ -17,12 +17,21 @@ class BuroDeIngresosService
     private ?string $ipAddress = null;
     private ?string $privacyNoticeUrl = null;
 
-    public function __construct(bool $sandbox = false)
+    public function __construct()
     {
         $this->apiKey = env('BURO_INGRESOS_API_KEY', '');
-        $this->sandbox = $sandbox;
         $this->webhookKey = env('BURO_INGRESOS_WEBHOOK_KEY', '');
+        $this->sandbox = env('BURO_INGRESOS_SANDBOX_MODE', null);
         $this->baseUrl = env('BURO_INGRESOS_API_BASE_URL', $this->baseUrl);
+
+        Log::error('BuroDeIngresosService initialized', [
+            "apiKey" => substr($this->apiKey, 0, 4) . '...' . substr($this->apiKey, -4),
+            "webhookKey" => substr($this->webhookKey, 0, 4) . '...' . substr($this->webhookKey, -4),
+            "baseUrl" => $this->baseUrl,
+            "sandbox" => $this->sandbox,
+            "sanboxType" => gettype($this->sandbox),
+        ]);
+
 
         if (empty($this->baseUrl)) {
             throw new \Exception('Base URL de Buró de Ingresos no configurada');
@@ -34,6 +43,10 @@ class BuroDeIngresosService
 
         if (empty($this->webhookKey)) {
             throw new \Exception('Webhook Key de Buró de Ingresos no configurada');
+        }
+
+        if ($this->sandbox === null) {
+            throw new \Exception('Modo Sandbox de Buró de Ingresos no configurado');
         }
     }
 

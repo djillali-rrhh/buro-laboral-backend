@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\BuroDeIngresosApiController;
+use App\Http\Controllers\Api\V1\BuroDeIngresosController;
 use Illuminate\Support\Facades\Route;
 
 // Rutas para Buró de Ingresos API
@@ -34,74 +34,73 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::prefix('buro-ingresos')->name('buro.')->group(function () {
-
     /**
      * CONSENTIMIENTOS
      */
-    Route::post('/consents', [BuroDeIngresosApiController::class, 'createConsent'])
+    Route::post('/consents', [BuroDeIngresosController::class, 'createConsent'])
         ->name('consents.create');
 
-    Route::post('/consents/bulk', [BuroDeIngresosApiController::class, 'createBulkConsents'])
+    Route::post('/consents/bulk', [BuroDeIngresosController::class, 'createBulkConsents'])
         ->name('consents.create.bulk');
 
-    Route::get('/consents', [BuroDeIngresosApiController::class, 'listConsents'])
+    Route::get('/consents', [BuroDeIngresosController::class, 'listConsents'])
         ->name('consents.list');
 
     /**
      * VERIFICACIONES
      */
-    Route::post('/verifications', [BuroDeIngresosApiController::class, 'createVerification'])
+    Route::post('/verifications', [BuroDeIngresosController::class, 'createVerification'])
         ->name('verifications.create');
 
-    Route::get('/verifications', [BuroDeIngresosApiController::class, 'listVerifications'])
+    Route::get('/verifications', [BuroDeIngresosController::class, 'listVerifications'])
         ->name('verifications.list');
 
-    Route::post('/verifications/bulk', [BuroDeIngresosApiController::class, 'createBulkVerifications'])
+    Route::post('/verifications/bulk', [BuroDeIngresosController::class, 'createBulkVerifications'])
         ->name('verifications.create.bulk');
 
-    Route::get('/verifications/{verificationId}', [BuroDeIngresosApiController::class, 'getVerification'])
+    Route::get('/verifications/{verificationId}', [BuroDeIngresosController::class, 'getVerification'])
         ->name('verifications.get');
 
-    Route::get('/verifications/bulk/{bulkId}', [BuroDeIngresosApiController::class, 'getBulkVerificationStatus'])
+    Route::get('/verifications/bulk/{bulkId}', [BuroDeIngresosController::class, 'getBulkVerificationStatus'])
         ->name('verifications.bulk.status');
 
-    Route::delete('/verifications/{verificationId}', [BuroDeIngresosApiController::class, 'deleteVerification'])
+    Route::delete('/verifications/{verificationId}', [BuroDeIngresosController::class, 'deleteVerification'])
         ->name('verifications.delete');
 
-    Route::delete('/verifications/bulk/{bulkId}', [BuroDeIngresosApiController::class, 'deleteBulkVerification'])
+    Route::delete('/verifications/bulk/{bulkId}', [BuroDeIngresosController::class, 'deleteBulkVerification'])
         ->name('verifications.bulk.delete');
 
     /**
      * INFORMACIÓN
      */
-    Route::get('/profile/{identifier}', [BuroDeIngresosApiController::class, 'getProfile'])
+    Route::get('/profile/{identifier}', [BuroDeIngresosController::class, 'getProfile'])
         ->name('profile.get');
 
-    Route::get('/employments/{identifier}', [BuroDeIngresosApiController::class, 'getEmployments'])
+    Route::get('/employments/{identifier}', [BuroDeIngresosController::class, 'getEmployments'])
         ->name('employments.get');
 
-    Route::get('/invoices/{identifier}', [BuroDeIngresosApiController::class, 'getInvoices'])
+    Route::get('/invoices/{identifier}', [BuroDeIngresosController::class, 'getInvoices'])
         ->name('invoices.get');
 
     // Método auxiliar que obtiene los datos completos (perfil, empleos e invoices) del candidato
-    Route::get('/data/{identifier}', [BuroDeIngresosApiController::class, 'getCandidateData'])
+    Route::get('/data/{identifier}', [BuroDeIngresosController::class, 'getCandidateData'])
         ->name('candidate.data');
 
     /**
      * WEBHOOKS
      */
-    Route::post('/webhooks', [BuroDeIngresosApiController::class, 'createWebhook'])
+    Route::post('/webhooks', [BuroDeIngresosController::class, 'createWebhook'])
         ->name('webhooks.create');
 
-    Route::get('/webhooks', [BuroDeIngresosApiController::class, 'listWebhooks'])
+    Route::get('/webhooks', [BuroDeIngresosController::class, 'listWebhooks'])
         ->name('webhooks.list');
 
-    Route::get('/webhooks/{webhookId}', [BuroDeIngresosApiController::class, 'getWebhook'])
+    Route::get('/webhooks/{webhookId}', [BuroDeIngresosController::class, 'getWebhook'])
         ->name('webhooks.get');
 
-    Route::delete('/webhooks/{webhookId}', [BuroDeIngresosApiController::class, 'deleteWebhook'])
+    Route::delete('/webhooks/{webhookId}', [BuroDeIngresosController::class, 'deleteWebhook'])
         ->name('webhooks.delete');
 
-    Route::patch('/webhooks/{webhookId}', [BuroDeIngresosApiController::class, 'updateWebhook'])
+    Route::patch('/webhooks/{webhookId}', [BuroDeIngresosController::class, 'updateWebhook'])
         ->name('webhooks.update');
 });
