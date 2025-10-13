@@ -286,9 +286,10 @@ class BuroDeIngresosService
     public function createBulkVerifications(array $verifications): array
     {
         try {
-            $response = $this->getHttpClient()->post('/verifications/bulk', [
-                'verifications' => $verifications
-            ]);
+     
+            $response = $this->getHttpClient()->post('/verifications/bulk', 
+                $verifications
+            );
 
             return [
                 'success' => $response->successful(),
@@ -446,13 +447,29 @@ class BuroDeIngresosService
     }
 
     /**
-     * Obtiene el historial de empleos
+     * Obtiene el historial de empleos del candidato con filtros opcionales
      */
-    public function getEmployments(): array
-    {
+    public function getEmployments(
+        int $page = 1,
+        int $itemsPerPage = 100,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
         try {
-            $response = $this->getHttpClient()->get("/employments/{$this->curp}");
+            $queryParams = [
+                'page' => $page,
+                'items_per_page' => $itemsPerPage,
+            ];
 
+            if ($startDate) {
+                $queryParams['start_date'] = $startDate;
+            }
+
+            if ($endDate) {
+                $queryParams['end_date'] = $endDate;
+            }
+
+            $response = $this->getHttpClient()->get("/employments/{$this->curp}", $queryParams);
 
             return [
                 'success' => $response->successful(),
@@ -460,8 +477,9 @@ class BuroDeIngresosService
                 'http_code' => $response->status(),
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener empleos', [
+            Log::error('Error al obtener historial de empleos', [
                 'curp' => $this->curp,
+                'filters' => compact('page', 'itemsPerPage', 'startDate', 'endDate'),
                 'error' => $e->getMessage(),
             ]);
 
@@ -474,12 +492,34 @@ class BuroDeIngresosService
     }
 
     /**
-     * Obtiene las invoices del candidato
+     * Obtiene las invoices del candidato con filtros opcionales
      */
-    public function getInvoices(): array
-    {
+    public function getInvoices(
+        ?string $type = null,
+        int $page = 1,
+        int $itemsPerPage = 100,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
         try {
-            $response = $this->getHttpClient()->get("/invoices/{$this->curp}");
+            $queryParams = [
+                'page' => $page,
+                'items_per_page' => $itemsPerPage,
+            ];
+
+            if ($type) {
+                $queryParams['type'] = $type;
+            }
+
+            if ($startDate) {
+                $queryParams['start_date'] = $startDate;
+            }
+
+            if ($endDate) {
+                $queryParams['end_date'] = $endDate;
+            }
+
+            $response = $this->getHttpClient()->get("/invoices/{$this->curp}", $queryParams);
 
             return [
                 'success' => $response->successful(),
@@ -489,6 +529,7 @@ class BuroDeIngresosService
         } catch (\Exception $e) {
             Log::error('Error al obtener invoices', [
                 'curp' => $this->curp,
+                'filters' => compact('type', 'page', 'itemsPerPage', 'startDate', 'endDate'),
                 'error' => $e->getMessage(),
             ]);
 
