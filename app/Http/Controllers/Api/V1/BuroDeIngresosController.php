@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\BuroDeIngresosService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
-class BuroDeIngresosApiController extends Controller
+class BuroDeIngresosController extends Controller
 {
     use ApiResponse;
 
@@ -17,6 +18,8 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Crea un consentimiento
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
      */
     public function createConsent(Request $request)
     {
@@ -26,7 +29,7 @@ class BuroDeIngresosApiController extends Controller
         ]);
 
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setCurp($validated['curp'])
                 ->setIpAddress($request->ip())
                 ->setPrivacyNoticeUrl($validated['privacy_notice_url']);
@@ -46,6 +49,11 @@ class BuroDeIngresosApiController extends Controller
         }
     }
 
+    /**
+     * Crea consentimientos en masa
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
+     */
     public function createBulkConsents(Request $request)
     {
         $validated = $request->validate([
@@ -55,7 +63,7 @@ class BuroDeIngresosApiController extends Controller
         ]);
 
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setIpAddress($request->ip())
                 ->setPrivacyNoticeUrl($validated['privacy_notice_url']);
 
@@ -74,6 +82,11 @@ class BuroDeIngresosApiController extends Controller
         }
     }
 
+    /**
+     * Lista los consentimientos
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
+     */
     public function listConsents(Request $request)
     {
         $validated = $request->validate([
@@ -86,7 +99,7 @@ class BuroDeIngresosApiController extends Controller
         $itemsPerPage = $validated['items_per_page'] ?? 100;
 
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true));
+            $buroService = (new BuroDeIngresosService());
 
             if (isset($validated['curp'])) {
                 $buroService->setCurp($validated['curp']);
@@ -114,6 +127,8 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Crea una verificación
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
      */
     public function createVerification(Request $request)
     {
@@ -122,7 +137,7 @@ class BuroDeIngresosApiController extends Controller
         ]);
 
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setCurp($validated['curp']);
 
             $verification = $buroService->createVerification();
@@ -142,6 +157,8 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Lista las verificaciones
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
      */
     public function listVerifications(Request $request)
     {
@@ -157,7 +174,7 @@ class BuroDeIngresosApiController extends Controller
         $startDate = $validated['start_date'] ?? null;
 
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             if (isset($validated['curp'])) {
                 $buroService->setCurp($validated['curp']);
@@ -186,6 +203,8 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Crea verificaciones en masa
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
      */
     public function createBulkVerifications(Request $request)
     {
@@ -196,7 +215,7 @@ class BuroDeIngresosApiController extends Controller
         ]);
 
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $verifications = $buroService->createBulkVerifications($validated['verifications']);
 
@@ -221,11 +240,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Obtiene el estado de una verificación
+     * @param  string  $verificationId
+     * @return \Illuminate\Http\Response
      */
     public function getVerification(string $verificationId)
     {
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setVerificationId($verificationId);
 
             $verification = $buroService->getVerification();
@@ -238,11 +259,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Obtiene el estado de una verificación en masa
+     * @param  string  $bulkId
+     * @return \Illuminate\Http\Response
      */
     public function getBulkVerificationStatus(string $bulkId)
     {
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $status = $buroService->getBulkVerificationStatus($bulkId);
 
@@ -264,11 +287,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Elimina una verificación específica
+     * @param  string  $verificationId
+     * @return \Illuminate\Http\Response
      */
     public function deleteVerification(string $verificationId)
     {
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $result = $buroService->deleteVerification($verificationId);
 
@@ -293,11 +318,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Elimina una verificación en masa y todas sus verificaciones asociadas
+     * @param  string  $bulkId
+     * @return \Illuminate\Http\Response
      */
     public function deleteBulkVerification(string $bulkId)
     {
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $result = $buroService->deleteBulkVerification($bulkId);
 
@@ -326,11 +353,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Obtiene las facturas del candidato desde Buró de Ingresos
+     * @param  string  $identifier
+     * @return \Illuminate\Http\Response
      */
     public function getInvoices(string $identifier)
     {
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setCurp($identifier);
 
             $invoices = $buroService->getInvoices();
@@ -350,11 +379,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Obtiene el perfil del candidato desde Buró de Ingresos
+     * @param  string  $identifier
+     * @return \Illuminate\Http\Response
      */
     public function getProfile(string $identifier)
     {
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setCurp($identifier);
 
             $profile = $buroService->getProfile();
@@ -374,11 +405,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Obtiene el historial de empleos del candidato
+     * @param  string  $identifier
+     * @return \Illuminate\Http\Response
      */
     public function getEmployments(string $identifier)
     {
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setCurp($identifier);
 
             $employments = $buroService->getEmployments();
@@ -399,11 +432,13 @@ class BuroDeIngresosApiController extends Controller
     /**
      * Obtiene perfil, empleos e invoices del candidato
      * Este método no forma parte de la API original, es un método auxiliar
+     * @param  string  $identifier
+     * @return \Illuminate\Http\Response
      */
     public function getCandidateData(string $identifier)
     {
         try {
-            $buroService = (new BuroDeIngresosService(sandbox: true))
+            $buroService = (new BuroDeIngresosService())
                 ->setCurp($identifier);
 
             $profile = $buroService->getProfile();
@@ -423,6 +458,12 @@ class BuroDeIngresosApiController extends Controller
     /**
      * WEBHOOKS
      */
+
+    /**
+     * Crea un nuevo webhook
+     * @param  \Illuminate\Http\Request
+     * @return \Illuminate\Http\Response
+     */
     public function createWebhook(Request $request)
     {
         $validated = $request->validate([
@@ -431,7 +472,7 @@ class BuroDeIngresosApiController extends Controller
         ]);
 
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $webhook = $buroService->createWebhook(
                 $validated['endpoint_url'],
@@ -451,10 +492,15 @@ class BuroDeIngresosApiController extends Controller
         }
     }
 
+    /**
+     * Obtiene un webhook específico
+     * @param  string  $webhookId
+     * @return \Illuminate\Http\Response
+     */
     public function getWebhook(string $webhookId)
     {
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $webhook = $buroService->getWebhook($webhookId);
 
@@ -473,11 +519,13 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Elimina un webhook específico
+     * @param  string  $webhookId
+     * @return \Illuminate\Http\Response
      */
     public function deleteWebhook(string $webhookId)
     {
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $result = $buroService->deleteWebhook($webhookId);
 
@@ -502,6 +550,8 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Actualiza un webhook existente
+     * @param  \Illuminate\Http\Request
+     * @param  string  $webhookId
      */
     public function updateWebhook(Request $request, string $webhookId)
     {
@@ -512,7 +562,7 @@ class BuroDeIngresosApiController extends Controller
         ]);
 
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $result = $buroService->updateWebhook(
                 $webhookId,
@@ -542,11 +592,12 @@ class BuroDeIngresosApiController extends Controller
 
     /**
      * Lista todos los webhooks registrados
+     * @return \Illuminate\Http\Response
      */
     public function listWebhooks()
     {
         try {
-            $buroService = new BuroDeIngresosService(sandbox: true);
+            $buroService = new BuroDeIngresosService();
 
             $webhooks = $buroService->listWebhooks();
 
@@ -565,4 +616,25 @@ class BuroDeIngresosApiController extends Controller
             );
         }
     }
+
+    // public function handle(Request $request, BuroWebhookObserver $observer)
+    // {
+    //     // Validar webhook key
+    //     if ($request->header('BURO_INGRESOS_WEBHOOK_KEY') !== env('BURO_INGRESOS_WEBHOOK_KEY')) {
+    //         Log::warning('Webhook key inválido', ['ip' => $request->ip()]);
+    //         return response()->json(['error' => 'Unauthorized'], 401);
+    //     }
+
+    //     $payload = $request->all();
+
+    //     Log::info('Webhook recibido', [
+    //         'event' => $payload['event'] ?? null,
+    //         'verification_id' => $payload['verification_id'] ?? null,
+    //     ]);
+
+    //     // Notificar al observador
+    //     $observer->notify($payload);
+
+    //     return response()->json(['status' => 'received'], 200);
+    // }
 }

@@ -1,6 +1,6 @@
 <?php
 
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Carga dinámica de archivos de rutas dentro de /routes/API/v1.
