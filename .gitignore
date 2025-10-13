@@ -1,3 +1,4 @@
+/storage/api-docs/
 *.log
 .DS_Store
 .env
