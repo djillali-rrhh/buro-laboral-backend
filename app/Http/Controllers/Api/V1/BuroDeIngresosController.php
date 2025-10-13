@@ -985,6 +985,267 @@ use Illuminate\Http\Request;
  *         ref="#/components/schemas/InvoicesData"
  *     )
  * )
+ * 
+ * @OA\Schema(
+ *     schema="EmploymentRecord",
+ *     @OA\Property(
+ *         property="employer",
+ *         type="string",
+ *         description="Nombre del empleador",
+ *         example="SECRETARIA DE SALUD"
+ *     ),
+ *     @OA\Property(
+ *         property="employer_registration",
+ *         type="string",
+ *         nullable=true,
+ *         description="Número de registro del empleador. Puede ser null para ciertas instituciones como ISSSTE",
+ *         example="Y522272310"
+ *     ),
+ *     @OA\Property(
+ *         property="start_date",
+ *         type="string",
+ *         format="date",
+ *         description="Fecha de inicio del empleo",
+ *         example="2023-01-15"
+ *     ),
+ *     @OA\Property(
+ *         property="end_date",
+ *         type="string",
+ *         format="date",
+ *         nullable=true,
+ *         description="Fecha de fin del empleo. Null si actualmente está empleado",
+ *         example="2022-12-31"
+ *     ),
+ *     @OA\Property(
+ *         property="federal_entity",
+ *         type="string",
+ *         nullable=true,
+ *         description="Entidad federativa (ej. estado) donde está registrado el empleo",
+ *         example="CIUDAD DE MEXICO"
+ *     ),
+ *     @OA\Property(
+ *         property="base_salary",
+ *         type="number",
+ *         format="float",
+ *         description="Salario base del empleo",
+ *         example=1150.5
+ *     ),
+ *     @OA\Property(
+ *         property="monthly_salary",
+ *         type="number",
+ *         format="float",
+ *         description="Salario mensual calculado",
+ *         example=34990.25
+ *     ),
+ *     @OA\Property(
+ *         property="pdf_link",
+ *         type="string",
+ *         format="uri",
+ *         description="Enlace al documento PDF de este registro de empleo",
+ *         example="https://storage.googleapis.com/income-bureau-files-stg/issste/CUAI911021MOCRQS09.pdf"
+ *     ),
+ *     @OA\Property(
+ *         property="institution",
+ *         type="string",
+ *         enum={"imss", "issste"},
+ *         description="Institución con la que está asociado el empleo",
+ *         example="issste"
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="EmploymentsData",
+ *     @OA\Property(
+ *         property="identifier",
+ *         type="string",
+ *         description="Identificador (CURP) asociado al historial laboral",
+ *         example="CUAI911021MOCRQS09"
+ *     ),
+ *     @OA\Property(
+ *         property="updated_at",
+ *         type="string",
+ *         format="date-time",
+ *         description="Marca de tiempo de la última actualización de datos para este historial laboral",
+ *         example="2025-09-10T17:40:22.153499Z"
+ *     ),
+ *     @OA\Property(
+ *         property="semanas_cotizadas",
+ *         type="integer",
+ *         description="Número total de semanas cotizadas",
+ *         example=250
+ *     ),
+ *     @OA\Property(
+ *         property="employment_history",
+ *         type="array",
+ *         description="Historial de empleos",
+ *         @OA\Items(ref="#/components/schemas/EmploymentRecord")
+ *     ),
+ *     @OA\Property(
+ *         property="pagination",
+ *         ref="#/components/schemas/Pagination"
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="GetEmploymentsResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="message", type="string", example="Historial laboral obtenido exitosamente"),
+ *     @OA\Property(
+ *         property="data",
+ *         ref="#/components/schemas/EmploymentsData"
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="CandidateCompleteData",
+ *     @OA\Property(
+ *         property="profile",
+ *         ref="#/components/schemas/ProfileData",
+ *         description="Información del perfil del candidato"
+ *     ),
+ *     @OA\Property(
+ *         property="employments",
+ *         ref="#/components/schemas/EmploymentsData",
+ *         description="Historial laboral completo del candidato"
+ *     ),
+ *     @OA\Property(
+ *         property="invoices",
+ *         ref="#/components/schemas/InvoicesData",
+ *         description="Facturas del candidato"
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="GetCandidateDataResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="message", type="string", example="Datos del candidato obtenidos exitosamente"),
+ *     @OA\Property(
+ *         property="data",
+ *         ref="#/components/schemas/CandidateCompleteData"
+ *     )
+ * )
+ * 
+ * 
+ * @OA\Schema(
+ *     schema="CreateWebhookRequest",
+ *     required={"endpoint_url"},
+ *     @OA\Property(
+ *         property="endpoint_url",
+ *         type="string",
+ *         format="uri",
+ *         description="URL para enviar las notificaciones del webhook",
+ *         example="https://tu-app.com/api/webhooks/buro-ingresos"
+ *     ),
+ *     @OA\Property(
+ *         property="description",
+ *         type="string",
+ *         description="Descripción del webhook",
+ *         example="Webhook para notificaciones de verificación"
+ *     ),
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="WebhookData",
+ *     @OA\Property(
+ *         property="id",
+ *         type="string",
+ *         format="uuid",
+ *         description="Identificador único del webhook",
+ *         example="0199de73-356c-7b56-a1ef-ca91b6bdb778"
+ *     ),
+ *     @OA\Property(
+ *         property="company_id",
+ *         type="string",
+ *         format="uuid",
+ *         description="Identificador de la empresa propietaria del webhook",
+ *         example="0199de73-356c-7b56-a1ef-ca91b6bdb779"
+ *     ),
+ *     @OA\Property(
+ *         property="description",
+ *         type="string",
+ *         description="Descripción del webhook",
+ *         example="Webhook para notificaciones de verificación"
+ *     ),
+ *     @OA\Property(
+ *         property="endpoint_url",
+ *         type="string",
+ *         format="uri",
+ *         description="URL para enviar las notificaciones del webhook",
+ *         example="https://tu-app.com/api/webhooks/buro-ingresos"
+ *     ),
+ *     @OA\Property(
+ *         property="secret_key",
+ *         type="string",
+ *         description="Clave secreta usada para verificar la firma en el header X-Signature del webhook, asegurando que la petición proviene del Buró de Ingresos",
+ *         example="wh_sec_abc123def456ghi789"
+ *     ),
+ *     @OA\Property(
+ *         property="is_active",
+ *         type="boolean",
+ *         description="Indica si el webhook está activo",
+ *         example=true
+ *     ),
+ *     @OA\Property(
+ *         property="created_at",
+ *         type="string",
+ *         format="date-time",
+ *         description="Marca de tiempo de cuándo se creó el webhook",
+ *         example="2025-10-13T16:41:56.332707106Z"
+ *     ),
+ *     @OA\Property(
+ *         property="updated_at",
+ *         type="string",
+ *         format="date-time",
+ *         description="Marca de tiempo de la última actualización del webhook",
+ *         example="2025-10-13T16:41:56.332707106Z"
+ *     ),
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="CreateWebhookResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="message", type="string", example="Webhook creado exitosamente"),
+ *     @OA\Property(
+ *         property="data",
+ *         ref="#/components/schemas/WebhookData"
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="GetWebhookResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="message", type="string", example="Webhook obtenido exitosamente"),
+ *     @OA\Property(
+ *         property="data",
+ *         ref="#/components/schemas/WebhookData"
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="DeleteWebhookResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="message", type="string", example="Webhook eliminado exitosamente"),
+ *     @OA\Property(
+ *         property="data",
+ *         type="object",
+ *         nullable=true,
+ *         description="Datos adicionales de la eliminación (puede ser null)",
+ *         example=null
+ *     )
+ * )
+ * 
+ * @OA\Schema(
+ *     schema="ListWebhooksResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="message", type="string", example="Webhooks obtenidos exitosamente"),
+ *     @OA\Property(
+ *         property="data",
+ *         type="array",
+ *         description="Lista de webhooks registrados",
+ *         @OA\Items(ref="#/components/schemas/WebhookData")
+ *     )
+ * )
+ * 
  */
 class BuroDeIngresosController extends Controller
 {
@@ -1738,6 +1999,7 @@ class BuroDeIngresosController extends Controller
                 ->setCurp($identifier);
 
             $profile = $buroService->getProfile();
+            
 
             if (!$profile['success']) {
                 return $this->errorResponse(
@@ -1758,18 +2020,80 @@ class BuroDeIngresosController extends Controller
     /**
      * @OA\Get(
      *     path="/buro-ingresos/employments/{identifier}",
-     *     summary="Obtener historial de empleos",
-     *     description="Obtiene el historial laboral del candidato",
+     *     summary="Obtener historial laboral",
+     *     description="Obtiene el historial laboral del candidato desde Buró de Ingresos, incluyendo semanas cotizadas y empleos en IMSS/ISSSTE",
      *     tags={"Buró de ingresos - Información"},
+     *     @OA\Parameter(
+     *         name="identifier",
+     *         in="path",
+     *         description="CURP del individuo",
+     *         required=true,
+     *         @OA\Schema(type="string", example="CUAI911021MOCRQS09")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Número de página para paginación",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, default=1, example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="items_per_page",
+     *         in="query",
+     *         description="Número de elementos por página",
+     *         required=false,
+     *         @OA\Schema(type="integer", minimum=1, maximum=100, default=100, example=100)
+     *     ),
+     *     @OA\Parameter(
+     *         name="start_date",
+     *         in="query",
+     *         description="Opcional. Filtra registros de empleo que se superponen o comienzan en/después de esta fecha (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2020-01-01")
+     *     ),
+     *     @OA\Parameter(
+     *         name="end_date",
+     *         in="query",
+     *         description="Opcional. Filtra registros de empleo que se superponen o terminan en/antes de esta fecha (YYYY-MM-DD)",
+     *         required=false,
+     *         @OA\Schema(type="string", format="date", example="2025-12-31")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Historial laboral del identificador (CURP)",
+     *         @OA\JsonContent(ref="#/components/schemas/GetEmploymentsResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Historial laboral no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Historial laboral no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="No autenticado"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
-    public function getEmployments(string $identifier)
+    public function getEmployments(Request $request, string $identifier)
     {
+        $validated = $request->validate([
+            'page' => 'sometimes|integer|min:1',
+            'items_per_page' => 'sometimes|integer|min:1|max:100',
+            'start_date' => 'sometimes|date_format:Y-m-d',
+            'end_date' => 'sometimes|date_format:Y-m-d',
+        ]);
+
         try {
             $buroService = (new BuroDeIngresosService())
                 ->setCurp($identifier);
 
-            $employments = $buroService->getEmployments();
+            $employments = $buroService->getEmployments(
+                $validated['page'] ?? 1,
+                $validated['items_per_page'] ?? 100,
+                $validated['start_date'] ?? null,
+                $validated['end_date'] ?? null
+            );
 
             if (!$employments['success']) {
                 return $this->errorResponse(
@@ -1778,7 +2102,10 @@ class BuroDeIngresosController extends Controller
                 );
             }
 
-            return $this->successResponse($employments['data']);
+            return $this->successResponse(
+                $employments['data'],
+                'Historial laboral obtenido exitosamente'
+            );
         } catch (\Exception $e) {
             return $this->errorResponse('Error al obtener empleos: ' . $e->getMessage(), 500);
         }
@@ -1788,8 +2115,30 @@ class BuroDeIngresosController extends Controller
      * @OA\Get(
      *     path="/buro-ingresos/data/{identifier}",
      *     summary="Obtener datos completos del candidato",
-     *     description="Obtiene perfil, empleos e invoices del candidato en una sola petición. Método auxiliar que no forma parte de la API original",
-     *     tags={"Buró de ingressos - Información"}
+     *     description="Obtiene toda la información disponible del candidato desde Buró de Ingresos: perfil, historial laboral y facturas en una sola petición",
+     *     tags={"Buró de ingresos - Información"},
+     *     @OA\Parameter(
+     *         name="identifier",
+     *         in="path",
+     *         description="CURP o RFC del individuo/negocio",
+     *         required=true,
+     *         @OA\Schema(type="string", example="CUAI911021MOCRQS09")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Datos completos del candidato obtenidos exitosamente",
+     *         @OA\JsonContent(ref="#/components/schemas/GetCandidateDataResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Datos del candidato no encontrados",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Datos del candidato no encontrados")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="No autenticado"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function getCandidateData(string $identifier)
@@ -1803,10 +2152,10 @@ class BuroDeIngresosController extends Controller
             $invoices = $buroService->getInvoices();
 
             return $this->successResponse([
-                'profile' => $profile,
-                'employments' => $employments,
-                'invoices' => $invoices,
-            ]);
+                'profile' => $profile['data'] ?? null,
+                'employments' => $employments['data'] ?? null,
+                'invoices' => $invoices['data'] ?? null,
+            ], 'Datos del candidato obtenidos exitosamente');
         } catch (\Exception $e) {
             return $this->errorResponse('Error al obtener datos: ' . $e->getMessage(), 500);
         }
@@ -1819,9 +2168,29 @@ class BuroDeIngresosController extends Controller
     /**
      * @OA\Post(
      *     path="/buro-ingresos/webhooks",
-     *     summary="Crear webhook",
-     *     description="Crea un nuevo webhook para recibir notificaciones",
+     *     summary="Crear un webhook",
+     *     description="Registra una nueva URL de webhook para recibir notificaciones de eventos de verificación",
      *     tags={"Buró de ingresos - Webhooks"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Configuración del webhook a crear",
+     *         @OA\JsonContent(ref="#/components/schemas/CreateWebhookRequest")
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Webhook creado exitosamente",
+     *         @OA\JsonContent(ref="#/components/schemas/CreateWebhookResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="The endpoint_url field is required.")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="No autenticado"),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function createWebhook(Request $request)
@@ -1855,9 +2224,38 @@ class BuroDeIngresosController extends Controller
     /**
      * @OA\Get(
      *     path="/buro-ingresos/webhooks/{webhookId}",
-     *     summary="Obtener webhook",
-     *     description="Obtiene los detalles de un webhook específico",
+     *     summary="Obtener un webhook",
+     *     description="Obtiene los detalles de un webhook específico por su ID",
      *     tags={"Buró de ingresos - Webhooks"},
+     *     @OA\Parameter(
+     *         name="webhookId",
+     *         in="path",
+     *         description="ID del webhook a obtener",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid", example="3fa85f64-5717-4562-b3fc-2c963f66afa6")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Detalles del webhook obtenidos exitosamente",
+     *         @OA\JsonContent(ref="#/components/schemas/GetWebhookResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Webhook no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Webhook no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado - API key inválida o faltante",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="No autenticado")
+     *         )
+     *     ),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function getWebhook(string $webhookId)
@@ -1874,7 +2272,10 @@ class BuroDeIngresosController extends Controller
                 );
             }
 
-            return $this->successResponse($webhook['data']);
+            return $this->successResponse(
+                $webhook['data'],
+                'Webhook obtenido exitosamente'
+            );
         } catch (\Exception $e) {
             return $this->errorResponse('Error al obtener webhook: ' . $e->getMessage(), 500);
         }
@@ -1883,9 +2284,37 @@ class BuroDeIngresosController extends Controller
     /**
      * @OA\Delete(
      *     path="/buro-ingresos/webhooks/{webhookId}",
-     *     summary="Eliminar webhook",
-     *     description="Elimina un webhook específico",
+     *     summary="Eliminar un webhook",
+     *     description="Elimina un webhook específico por su ID",
      *     tags={"Buró de ingresos - Webhooks"},
+     *     @OA\Parameter(
+     *         name="webhookId",
+     *         in="path",
+     *         description="ID del webhook a eliminar",
+     *         required=true,
+     *         @OA\Schema(type="string", format="uuid", example="3fa85f64-5717-4562-b3fc-2c963f66afa6")
+     *     ),
+     *     @OA\Response(
+     *         response=204,
+     *         description="Webhook eliminado exitosamente (sin contenido)"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Webhook no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Webhook no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado - API key inválida o faltante",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="No autenticado")
+     *         )
+     *     ),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function deleteWebhook(string $webhookId)
@@ -1903,57 +2332,13 @@ class BuroDeIngresosController extends Controller
             }
 
             return $this->successResponse(
-                $result['data'],
-                'Webhook eliminado exitosamente'
+                null,
+                'Webhook eliminado exitosamente',
+                204
             );
         } catch (\Exception $e) {
             return $this->errorResponse(
                 'Error al eliminar webhook: ' . $e->getMessage(),
-                500
-            );
-        }
-    }
-
-    /**
-     * @OA\Patch(
-     *     path="/buro-ingresos/webhooks/{webhookId}",
-     *     summary="Actualizar webhook",
-     *     description="Actualiza un webhook existente",
-     *     tags={"Buró de ingresos - Webhooks"},
-     * )
-     */
-    public function updateWebhook(Request $request, string $webhookId)
-    {
-        $validated = $request->validate([
-            'endpoint_url' => 'sometimes|url',
-            'is_active' => 'sometimes|boolean',
-            'description' => 'sometimes|string|max:255',
-        ]);
-
-        try {
-            $buroService = new BuroDeIngresosService();
-
-            $result = $buroService->updateWebhook(
-                $webhookId,
-                $validated['endpoint_url'] ?? null,
-                $validated['is_active'] ?? null,
-                $validated['description'] ?? null
-            );
-
-            if (!$result['success']) {
-                return $this->errorResponse(
-                    $result['message'] ?? 'Error al actualizar webhook',
-                    $result['http_code'] ?? 500
-                );
-            }
-
-            return $this->successResponse(
-                $result['data'],
-                'Webhook actualizado exitosamente'
-            );
-        } catch (\Exception $e) {
-            return $this->errorResponse(
-                'Error al actualizar webhook: ' . $e->getMessage(),
                 500
             );
         }
@@ -1965,6 +2350,20 @@ class BuroDeIngresosController extends Controller
      *     summary="Listar webhooks",
      *     description="Obtiene la lista de todos los webhooks registrados",
      *     tags={"Buró de ingresos - Webhooks"},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de webhooks obtenida exitosamente",
+     *         @OA\JsonContent(ref="#/components/schemas/ListWebhooksResponse")
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado - API key inválida o faltante",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="No autenticado")
+     *         )
+     *     ),
+     *     @OA\Response(response=500, description="Error interno del servidor")
      * )
      */
     public function listWebhooks()
@@ -1981,7 +2380,10 @@ class BuroDeIngresosController extends Controller
                 );
             }
 
-            return $this->successResponse($webhooks['data']);
+            return $this->successResponse(
+                $webhooks['data'],
+                'Webhooks obtenidos exitosamente'
+            );
         } catch (\Exception $e) {
             return $this->errorResponse(
                 'Error al listar webhooks: ' . $e->getMessage(),

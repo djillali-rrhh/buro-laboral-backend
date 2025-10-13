@@ -447,13 +447,29 @@ class BuroDeIngresosService
     }
 
     /**
-     * Obtiene el historial de empleos
+     * Obtiene el historial de empleos del candidato con filtros opcionales
      */
-    public function getEmployments(): array
-    {
+    public function getEmployments(
+        int $page = 1,
+        int $itemsPerPage = 100,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
         try {
-            $response = $this->getHttpClient()->get("/employments/{$this->curp}");
+            $queryParams = [
+                'page' => $page,
+                'items_per_page' => $itemsPerPage,
+            ];
 
+            if ($startDate) {
+                $queryParams['start_date'] = $startDate;
+            }
+
+            if ($endDate) {
+                $queryParams['end_date'] = $endDate;
+            }
+
+            $response = $this->getHttpClient()->get("/employments/{$this->curp}", $queryParams);
 
             return [
                 'success' => $response->successful(),
@@ -461,8 +477,9 @@ class BuroDeIngresosService
                 'http_code' => $response->status(),
             ];
         } catch (\Exception $e) {
-            Log::error('Error al obtener empleos', [
+            Log::error('Error al obtener historial de empleos', [
                 'curp' => $this->curp,
+                'filters' => compact('page', 'itemsPerPage', 'startDate', 'endDate'),
                 'error' => $e->getMessage(),
             ]);
 
@@ -485,7 +502,6 @@ class BuroDeIngresosService
         ?string $endDate = null
     ): array {
         try {
-            // Construir query params
             $queryParams = [
                 'page' => $page,
                 'items_per_page' => $itemsPerPage,
