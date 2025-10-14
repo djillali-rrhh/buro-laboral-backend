@@ -6,30 +6,6 @@ use Illuminate\Support\Facades\Route;
 // Rutas para el servicio de Poder Judicial API
 // Documentación: https://www.poderjudicialvirtual.com/developers
 
-// API ENDPOINTS
-# Autenticación
-// account              GET /account
-
-# Personas
-// get-curp           GET /curp/{curp}
-// search-by-names    GET /search/{nombres}/{apellidos}
-// search-by-fullname GET /search/{nombresCompleto}
-// exact-search       GET /exactsearch/{nombresCompleto}
-// post-curp          POST /curp
-// post-search        POST /search
-
-# Empresas
-// search-company     GET /company-search/{nombreEmpresa}
-// search-rfc         GET /rfc/{claveRfc}
-
-# Reportes
-// get-report-pdf     GET /report-pdf/{searchId}
-
-# Cédulas Profesionales
-// get-cedula-by-num  GET /cedula/{cedula}
-// get-cedula-by-name GET /cedula-nombre/{nombres}/{apellido1}/{apellido2}
-
-
 Route::prefix('poder-judicial')->name('poderjudicial.')->group(function () {
 
     /**
@@ -58,6 +34,22 @@ Route::prefix('poder-judicial')->name('poderjudicial.')->group(function () {
 
     Route::post('/search', [PoderJudicialController::class, 'searchByNamePost'])
         ->name('search.post');
+
+    /**
+     * 🚀 NUEVO ENDPOINT: BÚSQUEDA JUDICIAL COMPLETA CON PERSISTENCIA
+     *
+     * Endpoint moderno que integra:
+     * - Búsqueda por CURP y Estado
+     * - Llamada a API externa
+     * - Almacenamiento completo en base de datos
+     * - Cálculo de score
+     * - Respuesta estructurada
+     *
+     * Ejemplo: POST /api/poder-judicial/search-db
+     * Body: { "curp": "BACS970805HNLNRR01", "state": "NUEVO LEÓN" }
+     */
+    Route::post('/search-db', [PoderJudicialController::class, 'search'])
+        ->name('search.db');
 
     /**
      * BÚSQUEDA DE EMPRESAS

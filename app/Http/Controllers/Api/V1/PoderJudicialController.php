@@ -3,20 +3,26 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use App\Traits\ApiResponse;
 use App\Http\Requests\Api\V1\SearchByCurpRequest;
 use App\Http\Requests\Api\V1\SearchByNameRequest;
 use Illuminate\Http\Client\ConnectionException;
 use Throwable;
+use Illuminate\Support\Facades\Log;
+use App\Services\PoderJudicialService;
 
+/**
+ * Controlador para gestionar las interacciones con la API externa del Poder Judicial.
+ *
+ * @package App\Http\Controllers\Api\V1
+ */
 class PoderJudicialController extends Controller
 {
     use ApiResponse;
 
     /**
-     * Inicia sesión en la API externa.
+     * Obtiene la información de la cuenta del servicio externo.
      *
      * @return \Illuminate\Http\JsonResponse
      */
@@ -39,9 +45,9 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Consulta un CURP en la API externa (GET).
+     * Consulta la información de una persona a través de su CURP.
      *
-     * @param  string  $curp
+     * @param string $curp La CURP a consultar.
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCurp(string $curp)
@@ -58,10 +64,10 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Búsqueda por nombres y apellidos.
+     * Realiza una búsqueda por nombres y apellidos en el servicio externo.
      *
-     * @param  string  $nombres
-     * @param  string  $apellidos
+     * @param string $nombres Los nombres de la persona.
+     * @param string $apellidos Los apellidos de la persona.
      * @return \Illuminate\Http\JsonResponse
      */
     public function searchByNombresApellidos(string $nombres, string $apellidos)
@@ -78,9 +84,9 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Búsqueda por nombre completo.
+     * Realiza una búsqueda por nombre completo en el servicio externo.
      *
-     * @param  string  $nombresCompleto
+     * @param string $nombresCompleto El nombre completo de la persona.
      * @return \Illuminate\Http\JsonResponse
      */
     public function searchByNombreCompleto(string $nombresCompleto)
@@ -97,9 +103,9 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Búsqueda exacta por nombre completo.
+     * Realiza una búsqueda exacta por nombre completo en el servicio externo.
      *
-     * @param  string  $nombresCompleto
+     * @param string $nombresCompleto El nombre completo exacto a buscar.
      * @return \Illuminate\Http\JsonResponse
      */
     public function exactSearchByNombreCompleto(string $nombresCompleto)
@@ -115,31 +121,50 @@ class PoderJudicialController extends Controller
         return $this->errorResponse('Error en la búsqueda exacta.', $response->status());
     }
 
-    public function searchByCurpPost(SearchByCurpRequest $request)
-        {
-            try {
-                $validatedData = $request->validated();
-
-                $response = Http::withHeaders([
-                    'apikey' => config('services.poder_judicial.secret'),
-                ])->post(config('services.poder_judicial.base_uri') . '/curp', $validatedData);
-                
-                $response->throw(); 
-
-                return $this->successResponse($response->json(), 'Búsqueda por CURP exitosa.');
-
-            } catch (ConnectionException $e) {
-                return $this->errorResponse('Error de conexión con el servicio externo.', 504);
+    /**
+     * Realiza una búsqueda por CURP (POST), delega la lógica de API, persistencia y scoring al servicio.
+     *
+     * @param SearchByCurpRequest $request La solicitud validada con los datos de búsqueda.
+     * @param PoderJudicialService $service El servicio que encapsula la lógica de negocio.
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function searchByCurpPost(SearchByCurpRequest $request, PoderJudicialService $service)
+    {
+        try {
+            $validatedData = $request->validated();
             
-            } catch (Throwable $e) {
-                return $this->errorResponse(
-                    'Error en el servicio externo: ' . $e->getMessage(),
-                    $e->getCode()
-                );
+            $responseData = $service->searchAndPersistByCurp($validatedData);
+
+            $isSuccess = ($responseData['status'] ?? false) === true;
+            $message = $responseData['message'] ?? ($isSuccess ? 'Búsqueda por CURP exitosa y persistencia completa realizada.' : 'Búsqueda fallida en el servicio externo. Datos de CURP guardados.');
+            
+            if ($isSuccess) {
+                return $this->successResponse($responseData, $message);
             }
+            
+            return $this->errorResponse($message, 200, $responseData);
+
+        } catch (ConnectionException $e) {
+            return $this->errorResponse('Error de conexión con el servicio externo.', 504);
+        
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($e->getMessage(), 500);
+
+        } catch (Throwable $e) {
+            Log::error("Error en searchByCurpPost (General): " . $e->getMessage());
+            return $this->errorResponse('Error interno del servidor al procesar la búsqueda.', $e->getCode() ?: 500);
         }
+    }
+    
+    /**
+     * Realiza una búsqueda por nombre (POST). La lógica de persistencia debe ser movida a un servicio.
+     *
+     * @param SearchByNameRequest $request La solicitud validada con los datos de búsqueda.
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function searchByNamePost(SearchByNameRequest $request)
     {
+        $response = null;
         try {
             $validatedData = $request->validated();
 
@@ -149,23 +174,44 @@ class PoderJudicialController extends Controller
             
             $response->throw();
 
-            return $this->successResponse($response->json(), 'Búsqueda por nombre (POST) exitosa.');
+            $responseData = $response->json();
+            $data = $responseData; 
+            
+            $message = 'Búsqueda por nombre (POST) exitosa.';
+            if (($data['total_results'] ?? 0) > 0) {
+                 $message .= ' Se encontraron resultados legales.';
+            } else {
+                 $message .= ' No se encontraron resultados legales.';
+            }
+
+            // TO-DO: Implementar llamada al servicio para persistir y devolver el resultado.
+            return $this->successResponse($responseData, $message);
+
 
         } catch (ConnectionException $e) {
             return $this->errorResponse('Error de conexión con el servicio externo.', 504);
         
         } catch (Throwable $e) {
-            return $this->errorResponse(
-                'Error en el servicio externo: ' . $e->getMessage(),
-                $e->getCode() ?: 500
-            );
+            $statusCode = 500;
+            $errorMessage = 'Error en el servicio externo.';
+
+            if (isset($response) && ($response->clientError() || $response->serverError())) {
+                $statusCode = $response->status();
+                $errorMessage = 'Error del servicio externo: ' . ($response->json()['message'] ?? $response->body());
+            } else {
+                $errorMessage = 'Error interno al procesar la búsqueda: ' . $e->getMessage();
+                $statusCode = $e->getCode() ?: 500;
+            }
+
+            Log::error("Error en searchByNamePost (General): " . $errorMessage);
+            return $this->errorResponse($errorMessage, $statusCode);
         }
     }
 
     /**
-     * Busca una empresa por nombre o razón social.
+     * Busca una empresa por su nombre en el servicio externo.
      *
-     * @param  string  $nombreEmpresa
+     * @param string $nombreEmpresa El nombre de la empresa a buscar.
      * @return \Illuminate\Http\JsonResponse
      */
     public function searchCompanyByName(string $nombreEmpresa)
@@ -191,9 +237,9 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Busca una empresa por su RFC.
+     * Busca una empresa por su RFC en el servicio externo.
      *
-     * @param  string  $claveRfc
+     * @param string $claveRfc El RFC de la empresa a buscar.
      * @return \Illuminate\Http\JsonResponse
      */
     public function searchCompanyByRfc(string $claveRfc)
@@ -214,14 +260,15 @@ class PoderJudicialController extends Controller
             return $this->errorResponse(
                 'Error en el servicio externo: ' . $e->getMessage(),
                 $e->getCode() ?: 500
-            );
+            )
+            ;
         }
     }
 
     /**
-     * Genera y obtiene la URL de un reporte en PDF a partir de un ID de búsqueda.
+     * Obtiene un reporte en formato PDF a partir de un ID de búsqueda.
      *
-     * @param  string  $searchId
+     * @param string $searchId El ID de la búsqueda previa.
      * @return \Illuminate\Http\JsonResponse
      */
     public function getReportPdf(string $searchId)
@@ -247,9 +294,9 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Consulta una cédula profesional por número.
+     * Consulta una cédula profesional por su número.
      *
-     * @param  string  $cedula
+     * @param string $cedula El número de la cédula profesional.
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCedulaByNumero(string $cedula)
@@ -275,11 +322,11 @@ class PoderJudicialController extends Controller
     }
 
     /**
-     * Consulta cédulas profesionales por nombre completo.
+     * Consulta cédulas profesionales por nombre completo de la persona.
      *
-     * @param  string  $nombres
-     * @param  string  $apellido1
-     * @param  string  $apellido2
+     * @param string $nombres Nombre(s) de la persona.
+     * @param string $apellido1 Primer apellido.
+     * @param string $apellido2 Segundo apellido.
      * @return \Illuminate\Http\JsonResponse
      */
     public function getCedulaByNombre(string $nombres, string $apellido1, string $apellido2)
@@ -304,4 +351,3 @@ class PoderJudicialController extends Controller
         }
     }
 }
-
