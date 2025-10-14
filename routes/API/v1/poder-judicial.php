@@ -36,22 +36,6 @@ Route::prefix('poder-judicial')->name('poderjudicial.')->group(function () {
         ->name('search.post');
 
     /**
-     * 🚀 NUEVO ENDPOINT: BÚSQUEDA JUDICIAL COMPLETA CON PERSISTENCIA
-     *
-     * Endpoint moderno que integra:
-     * - Búsqueda por CURP y Estado
-     * - Llamada a API externa
-     * - Almacenamiento completo en base de datos
-     * - Cálculo de score
-     * - Respuesta estructurada
-     *
-     * Ejemplo: POST /api/poder-judicial/search-db
-     * Body: { "curp": "BACS970805HNLNRR01", "state": "NUEVO LEÓN" }
-     */
-    Route::post('/search-db', [PoderJudicialController::class, 'search'])
-        ->name('search.db');
-
-    /**
      * BÚSQUEDA DE EMPRESAS
      */
     Route::get('/company-search/{nombreEmpresa}', [PoderJudicialController::class, 'searchCompanyByName'])

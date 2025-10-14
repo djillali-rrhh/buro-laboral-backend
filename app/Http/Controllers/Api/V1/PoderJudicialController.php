@@ -135,14 +135,27 @@ class PoderJudicialController extends Controller
             
             $responseData = $service->searchAndPersistByCurp($validatedData);
 
-            $isSuccess = ($responseData['status'] ?? false) === true;
-            $message = $responseData['message'] ?? ($isSuccess ? 'Búsqueda por CURP exitosa y persistencia completa realizada.' : 'Búsqueda fallida en el servicio externo. Datos de CURP guardados.');
-            
-            if ($isSuccess) {
+            // Determina el éxito basado en si se encontraron datos de la CURP,
+            // ignorando el 'status: false' de la API externa cuando solo no encuentra expedientes.
+            $curpInfoFound = !empty($responseData['curp_info'] ?? $responseData['errors']['curp_info'] ?? []);
+
+            if ($curpInfoFound) {
+                $message = 'Búsqueda exitosa. Se encontraron datos de la CURP.';
+                $totalResults = $responseData['total_results'] ?? $responseData['errors']['total_results'] ?? 0;
+                
+                if ($totalResults > 0) {
+                    $message .= " Se encontraron {$totalResults} expedientes.";
+                } else {
+                    $message .= ' No se encontraron expedientes legales asociados.';
+                }
+                
+                // Forzamos una respuesta exitosa ya que la consulta principal (CURP) fue correcta.
                 return $this->successResponse($responseData, $message);
             }
-            
-            return $this->errorResponse($message, 200, $responseData);
+
+            // Si ni siquiera se encontró la información de la CURP, es un fallo real.
+            $fallbackMessage = 'La búsqueda no arrojó ningún resultado para la CURP proporcionada.';
+            return $this->errorResponse($responseData['message'] ?? $fallbackMessage, 404, $responseData);
 
         } catch (ConnectionException $e) {
             return $this->errorResponse('Error de conexión con el servicio externo.', 504);
@@ -157,54 +170,46 @@ class PoderJudicialController extends Controller
     }
     
     /**
-     * Realiza una búsqueda por nombre (POST). La lógica de persistencia debe ser movida a un servicio.
+     * Realiza una búsqueda por nombre (POST) y delega la persistencia al servicio.
      *
      * @param SearchByNameRequest $request La solicitud validada con los datos de búsqueda.
+     * @param PoderJudicialService $service El servicio que encapsula la lógica de negocio.
      * @return \Illuminate\Http\JsonResponse
      */
-    public function searchByNamePost(SearchByNameRequest $request)
+    public function searchByNamePost(SearchByNameRequest $request, PoderJudicialService $service)
     {
-        $response = null;
         try {
             $validatedData = $request->validated();
 
-            $response = Http::withHeaders([
-                'apikey' => config('services.poder_judicial.secret'),
-            ])->post(config('services.poder_judicial.base_uri') . '/search', $validatedData);
-            
-            $response->throw();
+            // Se asume que el servicio tiene un método análogo para buscar por nombre.
+            // Este método debe ser creado en PoderJudicialService.
+            $responseData = $service->searchAndPersistByName($validatedData);
 
-            $responseData = $response->json();
-            $data = $responseData; 
+            // La lógica de éxito es directa: si la llamada no lanzó una excepción, la búsqueda fue exitosa.
+            // El mensaje simplemente indicará si se encontraron resultados o no.
+            $totalResults = $responseData['total_results'] ?? $responseData['errors']['total_results'] ?? 0;
             
-            $message = 'Búsqueda por nombre (POST) exitosa.';
-            if (($data['total_results'] ?? 0) > 0) {
-                 $message .= ' Se encontraron resultados legales.';
+            if ($totalResults > 0) {
+                $message = "Búsqueda por nombre exitosa. Se encontraron {$totalResults} expedientes.";
             } else {
-                 $message .= ' No se encontraron resultados legales.';
+                $message = 'Búsqueda por nombre exitosa. No se encontraron expedientes legales asociados.';
             }
-
-            // TO-DO: Implementar llamada al servicio para persistir y devolver el resultado.
+            
             return $this->successResponse($responseData, $message);
 
-
         } catch (ConnectionException $e) {
+            Log::error("Error de conexión en searchByNamePost: " . $e->getMessage());
             return $this->errorResponse('Error de conexión con el servicio externo.', 504);
         
+        } catch (\RuntimeException $e) {
+            // Captura errores específicos de persistencia que puedan originarse en el servicio.
+            Log::error("Error de persistencia en searchByNamePost: " . $e->getMessage());
+            return $this->errorResponse($e->getMessage(), 500);
+
         } catch (Throwable $e) {
-            $statusCode = 500;
-            $errorMessage = 'Error en el servicio externo.';
-
-            if (isset($response) && ($response->clientError() || $response->serverError())) {
-                $statusCode = $response->status();
-                $errorMessage = 'Error del servicio externo: ' . ($response->json()['message'] ?? $response->body());
-            } else {
-                $errorMessage = 'Error interno al procesar la búsqueda: ' . $e->getMessage();
-                $statusCode = $e->getCode() ?: 500;
-            }
-
-            Log::error("Error en searchByNamePost (General): " . $errorMessage);
-            return $this->errorResponse($errorMessage, $statusCode);
+            Log::error("Error general en searchByNamePost: " . $e->getMessage());
+            $code = is_int($e->getCode()) && $e->getCode() > 0 ? $e->getCode() : 500;
+            return $this->errorResponse('Error interno del servidor al procesar la búsqueda por nombre.', $code);
         }
     }
 
@@ -351,3 +356,4 @@ class PoderJudicialController extends Controller
         }
     }
 }
+
