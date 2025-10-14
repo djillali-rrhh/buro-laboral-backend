@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Services\BuroDeIngresos\BuroDeIngresosService;
+use App\Services\BuroDeIngresos\BuroDeIngresosWebhookService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(BuroDeIngresosService::class);
+        $this->app->singleton(BuroDeIngresosWebhookService::class);
     }
 
     /**
