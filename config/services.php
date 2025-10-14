@@ -36,7 +36,11 @@ return [
     ],
 
     'poder_judicial' => [
-    'base_uri' => env('PODER_JUDICIAL_API_URL'),
-    'secret' => env('PODER_JUDICIAL_API_KEY'),
+        'base_uri' => env('PODER_JUDICIAL_API_URL'),
+        'secret' => env('PODER_JUDICIAL_API_KEY'),
+    ],
+
+    'ingenia' => [
+        'base_uri' => env('INGENIA_API_URL'), 
     ],
 ];
