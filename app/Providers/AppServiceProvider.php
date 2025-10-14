@@ -3,7 +3,12 @@
 namespace App\Providers;
 
 use App\Services\BuroDeIngresos\BuroDeIngresosService;
-use App\Services\BuroDeIngresos\BuroDeIngresosWebhookService;
+use App\Services\BuroDeIngresos\Actions\RetryAction;
+use App\Services\BuroDeIngresos\Actions\ProcessCandidatoDatos;
+use App\Services\BuroDeIngresos\Actions\ProcessCandidatoDatosExtra;
+use App\Services\BuroDeIngresos\Actions\ProcessCandidatoLaborales;
+use App\Services\BuroDeIngresos\Actions\ProcessDocumentosSA;
+
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,10 +18,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(BuroDeIngresosService::class);
-        $this->app->singleton(BuroDeIngresosWebhookService::class);
-    }
 
+    }
     /**
      * Bootstrap any application services.
      */

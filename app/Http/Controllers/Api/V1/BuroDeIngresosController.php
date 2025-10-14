@@ -1503,7 +1503,6 @@ class BuroDeIngresosController extends Controller
                 );
             }
 
-            // Retornar 202 Accepted en lugar de 200
             return response()->json([
                 'success' => true,
                 'message' => 'Verificación creada exitosamente',
@@ -2467,18 +2466,7 @@ class BuroDeIngresosController extends Controller
             $webhookKey = $request->header('BURO_INGRESOS_WEBHOOK_KEY');
             $expectedKey = env('BURO_INGRESOS_WEBHOOK_KEY');
             
-            Log::channel('buro_ingreso')->info('Recepción de webhook iniciada', [
-                "key" => $webhookKey,
-                "expected" => $expectedKey
-            ]);
-
             if ($webhookKey !== $expectedKey) {
-                Log::channel('buro_ingreso')->warning('Webhook con key inválida', [
-                    'ip' => $request->ip(),
-                    'received_key' => substr($webhookKey ?? '', 0, 10)
-                ]);
-
-                // Responder 200 para evitar reintentos del proveedor
                 return response()->json([
                     'status' => 'ok',
                     'message' => 'received'
@@ -2487,14 +2475,7 @@ class BuroDeIngresosController extends Controller
 
             $payload = $request->all();
 
-            Log::channel('buro_ingreso')->info('Webhook recibido', [
-                'curp' => $payload['identifier'] ?? 'N/A',
-                'status' => $payload['status'] ?? 'N/A',
-                'ip' => $request->ip()
-            ]);
-
-            // Procesar webhook
-            $resultado = $this->webhookService->procesarWebhook($payload);
+            $resultado = $this->webhookService->processWebhook($payload);
 
             return response()->json([
                 'status' => 'ok',

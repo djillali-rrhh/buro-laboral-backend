@@ -76,6 +76,19 @@ class RegistrosPalenca extends Model
     ];
 
     /**
+     * Obtiene el último registro del candidato basado en la CURP
+     * 
+     * @param string $curp
+     * @return RegistrosPalenca|null
+     */
+    public static function getLastByCurp(string $curp): ?RegistrosPalenca
+    {
+        return self::where('CURP', $curp)
+            ->latest('id')
+            ->first();
+    }
+
+    /**
      * Boot method to set default values
      */
     protected static function boot()

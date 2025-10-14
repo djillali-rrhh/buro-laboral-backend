@@ -58,4 +58,10 @@ class CandidatosLaborales extends Model
     {
         return $query->orderBy('Renglon', 'asc');
     }
+
+    public static function getMaxRenglon(int $candidatoId): int
+    {
+        return self::where('Candidato', $candidatoId)
+            ->max('Renglon') ?? 0;
+    }
 }
