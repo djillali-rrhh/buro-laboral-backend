@@ -9,14 +9,29 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Servicio para gestionar la comunicación con Ingenia API.
+ * Servicio para gestionar la comunicación con la API de Ingenia.
  *
- * Encapsula la lógica de las llamadas a la API y el registro de auditoría.
+ * Encapsula toda la lógica de negocio para las llamadas a la API externa,
+ * incluyendo la construcción del payload, el manejo de errores y el
+ * registro de auditoría para cada transacción.
+ *
+ * @package App\Services
+ * @version 1.0.0
  */
 class IngeniaApiService
 {
+    /**
+     * La URL base para la API de Ingenia.
+     *
+     * @var string
+     */
     protected string $baseUrl;
 
+    /**
+     * Crea una nueva instancia del servicio.
+     *
+     * Carga la URL base de la API desde el archivo de configuración de servicios.
+     */
     public function __construct()
     {
         $this->baseUrl = config('services.ingenia.base_uri');
@@ -25,8 +40,11 @@ class IngeniaApiService
     /**
      * Consulta la información de un candidato por su CURP.
      *
-     * @param string $curp
-     * @return array
+     * Realiza una petición POST al endpoint de consulta por CURP, maneja la respuesta
+     * y registra la transacción.
+     *
+     * @param string $curp La CURP del candidato a consultar.
+     * @return array Un arreglo con el resultado de la operación.
      */
     public function consultarPorCurp(string $curp): array
     {
@@ -42,8 +60,8 @@ class IngeniaApiService
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
                 ->post($this->baseUrl . $endpoint, $payload);
             
+            // Lanza una excepción si la respuesta no fue exitosa (status code >= 300).
             $response->throw();
-
             $responseData = $response->json();
 
             if ($responseData['success'] ?? false) {
@@ -56,22 +74,7 @@ class IngeniaApiService
             return ['success' => false, 'message' => $message, 'status' => $response->status(), 'data' => $responseData];
 
         } catch (Throwable $e) {
-            $status = 'error_conexion';
-            $statusCode = 500;
-            
-            if ($e instanceof RequestException) {
-                $responseData = $e->response->json() ?? ['error_message' => $e->response->body()];
-                $statusCode = $e->response->status();
-            } else {
-                $responseData = ['error' => $e->getMessage()];
-            }
-
-            Log::channel('ingenia_api')->error("Error en la petición a Ingenia [{$tipoConsulta}]", [
-                'error' => $e->getMessage(),
-                'response_body' => $responseData
-            ]);
-
-            return ['success' => false, 'message' => 'Error al comunicarse con el servicio de Ingenia.', 'status' => $statusCode, 'data' => $responseData];
+            return $this->handleException($e, $tipoConsulta, $status, $responseData);
         } finally {
             $this->logApiCall($curp, $tipoConsulta, $payload, $responseData, $status);
         }
@@ -80,21 +83,15 @@ class IngeniaApiService
     /**
      * Obtiene el CURP de un candidato a partir de sus datos personales.
      *
-     * @param array $data Los datos validados del request.
-     * @return array
+     * Construye el payload con los datos personales, realiza la petición POST,
+     * maneja la respuesta y registra la transacción.
+     *
+     * @param array $data Los datos personales validados del candidato.
+     * @return array Un arreglo con el resultado de la operación.
      */
     public function obtenerCurpPorDatos(array $data): array
     {
-        $payload = [
-            "nombre" => $data['nombre'],
-            "paterno" => $data['apellido_paterno'],
-            "materno" => $data['apellido_materno'],
-            "dia" => str_pad($data['dia_nacimiento'], 2, '0', STR_PAD_LEFT),
-            "mes" => str_pad($data['mes_nacimiento'], 2, '0', STR_PAD_LEFT),
-            "anio" => $data['anio_nacimiento'],
-            "estado" => $this->mapEstado($data['estado_nacimiento']),
-            "sexo" => ($data['sexo'] === 'HOMBRE') ? 'H' : 'M',
-        ];
+        $payload = $data;
         $tipoConsulta = 'por_datos';
         $endpoint = '/scrfcd';
         $status = 'iniciado';
@@ -107,7 +104,6 @@ class IngeniaApiService
                 ->post($this->baseUrl . $endpoint, $payload);
 
             $response->throw();
-
             $responseData = $response->json();
 
             if ($responseData['success'] ?? false) {
@@ -120,22 +116,7 @@ class IngeniaApiService
             return ['success' => false, 'message' => $message, 'status' => $response->status(), 'data' => $responseData];
 
         } catch (Throwable $e) {
-            $status = 'error_conexion';
-            $statusCode = 500;
-
-            if ($e instanceof RequestException) {
-                $responseData = $e->response->json() ?? ['error_message' => $e->response->body()];
-                $statusCode = $e->response->status();
-            } else {
-                $responseData = ['error' => $e->getMessage()];
-            }
-
-            Log::channel('ingenia_api')->error("Error en la petición a Ingenia [{$tipoConsulta}]", [
-                'error' => $e->getMessage(),
-                'response_body' => $responseData
-            ]);
-
-            return ['success' => false, 'message' => 'Error al comunicarse con el servicio de Ingenia.', 'status' => $statusCode, 'data' => $responseData];
+            return $this->handleException($e, $tipoConsulta, $status, $responseData);
         } finally {
             $curpFromResponse = $responseData['curp']['curp'] ?? null;
             $this->logApiCall($curpFromResponse, $tipoConsulta, $payload, $responseData, $status);
@@ -143,7 +124,16 @@ class IngeniaApiService
     }
 
     /**
-     * Registra la llamada a la API en la base de datos.
+     * Registra la llamada a la API en la base de datos para auditoría.
+     *
+     * Este método se ejecuta siempre, sin importar el resultado de la petición.
+     *
+     * @param string|null $curp La CURP asociada a la consulta (si está disponible).
+     * @param string $tipoConsulta El tipo de consulta realizada ('por_curp' o 'por_datos').
+     * @param array $requestPayload El payload enviado a la API.
+     * @param array|null $responsePayload La respuesta recibida de la API.
+     * @param string $status El estado final de la transacción.
+     * @return void
      */
     private function logApiCall(?string $curp, string $tipoConsulta, array $requestPayload, ?array $responsePayload, string $status): void
     {
@@ -161,45 +151,32 @@ class IngeniaApiService
     }
 
     /**
-     * Mapea el nombre del estado a su abreviatura.
+     * Centraliza el manejo de excepciones para las llamadas a la API.
+     *
+     * @param Throwable $e La excepción capturada.
+     * @param string $tipoConsulta El tipo de consulta que falló.
+     * @param string &$status La variable de estado que se actualizará.
+     * @param array &$responseData El arreglo de respuesta que se llenará con los detalles del error.
+     * @return array Un arreglo estandarizado de error.
      */
-    private function mapEstado(string $estadoNombre): string
+    private function handleException(Throwable $e, string $tipoConsulta, string &$status, array &$responseData): array
     {
-        $estados = [
-            "Aguascalientes" => "AS", 
-            "Baja California" => "BC", 
-            "Baja California Sur" => "BS",
-            "Campeche" => "CC", 
-            "Chiapas" => "CS", 
-            "Chihuahua" => "CH", 
-            "Ciudad de México" => "DF",
-            "Coahuila" => "CL", 
-            "Colima" => "CM", 
-            "Durango" => "DG", 
-            "Estado de México" => "MC",
-            "Guanajuato" => "GT", 
-            "Guerrero" => "GR", 
-            "Hidalgo" => "HG", 
-            "Jalisco" => "JC",
-            "Michoacán de Ocampo" => "MN", 
-            "Morelos" => "MS", "Nayarit" => "NT", 
-            "Nuevo León" => "NL",
-            "Oaxaca" => "OC", 
-            "Puebla" => "PL", 
-            "Querétaro" => "QT", 
-            "Quintana Roo" => "QR",
-            "San Luis Potosí" => "SP", 
-            "Sinaloa" => "SL", 
-            "Sonora" => "SR", 
-            "Tabasco" => "TC",
-            "Tamaulipas" => "TS", 
-            "Tlaxcala" => "TL", 
-            "Veracruz de Ignacio de la Llave" => "VZ",
-            "Yucatán" => "YN", 
-            "Zacatecas" => "ZS", 
-            "Nacido en el Extranjero" => "NE",
-        ];
-        return $estados[$estadoNombre] ?? '';
+        $status = 'error_conexion';
+        $statusCode = 500;
+        
+        if ($e instanceof RequestException) {
+            $responseData = $e->response->json() ?? ['error_message' => $e->response->body()];
+            $statusCode = $e->response->status();
+        } else {
+            $responseData = ['error' => $e->getMessage()];
+        }
+
+        Log::channel('ingenia_api')->error("Error en la petición a Ingenia [{$tipoConsulta}]", [
+            'error' => $e->getMessage(),
+            'response_body' => $responseData
+        ]);
+
+        return ['success' => false, 'message' => 'Error al comunicarse con el servicio de Ingenia.', 'status' => $statusCode, 'data' => $responseData];
     }
 }
 
