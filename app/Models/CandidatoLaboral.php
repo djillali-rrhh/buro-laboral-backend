@@ -9,18 +9,11 @@ class CandidatoLaboral extends Model
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     *
-     * @var string
-     */
     protected $table = 'rh_Candidatos_Laborales';
+    // Nota: El modelo legacy usa Candidato y Renglon como identificadores
+    // pero para Eloquent usaremos la configuración predeterminada.
+    public $timestamps = false; // Desactivar timestamps, ya que el código legacy no los usa.
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'Candidato',
         'Renglon',
@@ -52,26 +45,10 @@ class CandidatoLaboral extends Model
         'Puesto_Informante',
         'Razon_Social',
         'Tipo_Recision',
-        'pregunta_noviable_1',
-        'pregunta_noviable_2',
-        'pregunta_noviable_3',
-        'pregunta_noviable_4',
-        'pregunta_noviable_5',
-        'pregunta_noviable_6',
-        'pregunta_viableobs_1',
-        'pregunta_viableobs_2',
-        'pregunta_viableobs_3',
-        'pregunta_viableobs_4',
-        'pregunta_viable_1',
-        'pregunta_viable_2',
-        'Estado_empleo',
-        'Salario',
-        'Ejecutivo_Referencia',
-        'Comentario_Mensaje',
-        'ID_Documento',
-        'Fecha_Envio',
         'Tipo_Empleo',
         'Comentario_Ejecutivo',
+        'Estado_empleo',
+        'Salario',
         'Estado',
         'Ciudad',
         'Codigo_Postal',
@@ -83,29 +60,35 @@ class CandidatoLaboral extends Model
         'griver_2',
         'griver_3',
         'griver_4',
-        'fecha_respuesta',
-        'prellenado_candidato',
-        'prellenado_entrevistador',
-        'Formulario_ServiciosTerrestres',
-        'Fecha_Modificacion',
-        'Datos_Cooperacion',
         'Tipo_Unidad_Operada',
         'Tipo_Carga_Transportada',
-        'Validacion_DatosCooperacion',
-        'correos_formulario',
-        'toques',
-        'Alcohol_Resultado_Mayor004',
-        'Drogas_Positivo',
-        'Se_Nego_Prueba',
-        'Violacion_Regulaciones_DOT',
+        'prellenado_candidato',
+        'prellenado_entrevistador',
+        'Validacion_Datos_Cooperacion',
+        // Campos relacionados con DOT (Alcohol/Drogas)
+        'Alcohol_Resultado_Mayor004', 
+        'Drogas_Positivo', 
+        'Se_Nego_Prueba', 
+        'Violacion_Regulaciones_DOT', 
         'Reporte_Violacion_Empleador_Previo',
         'Completo_Proceso_Retorno_Servicio',
     ];
 
+    protected $casts = [
+        'Fecha_Ingreso' => 'date',
+        'Fecha_Baja' => 'date',
+        'Fecha_Ingreso_isela' => 'date',
+        'Fecha_Baja_isela' => 'date',
+        'Recontratable' => 'boolean',
+        'Calif' => 'integer',
+        'Dopaje' => 'integer',
+        'Sindicalizado' => 'boolean',
+    ];
+
     /**
-     * Indicates if the model should be timestamped.
-     *
-     * @var bool
+     * Nota de migración:
+     * Métodos complejos como getLaboralesPorCandidato() y los que usan stored procedures (CALL)
+     * deben ser reescritos usando el Query Builder de Eloquent o trasladados a un Repository/Service 
+     * dedicado para mantener limpio el modelo.
      */
-    public $timestamps = true;
 }

@@ -89,7 +89,7 @@ return [
             'handler_with' => [
                 'host' => env('PAPERTRAIL_URL'),
                 'port' => env('PAPERTRAIL_PORT'),
-                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
+                'connectionString' => 'tls://' . env('PAPERTRAIL_URL') . ':' . env('PAPERTRAIL_PORT'),
             ],
             'processors' => [PsrLogMessageProcessor::class],
         ],
@@ -127,6 +127,25 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'ingenia_api' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/ingenia_api.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
+        'buro_ingreso' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/buro_ingreso_webhook.log'),
+            'level' => 'info',
+            'days' => 30,
+        ],
+
+        "nubarium" => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/nubarium.log'),
+            'level' => 'info',
+            'days' => 30
+        ]
     ],
 
 ];

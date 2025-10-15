@@ -286,9 +286,11 @@ class BuroDeIngresosService
     public function createBulkVerifications(array $verifications): array
     {
         try {
-            $response = $this->getHttpClient()->post('/verifications/bulk', [
-                'verifications' => $verifications
-            ]);
+
+            $response = $this->getHttpClient()->post(
+                '/verifications/bulk',
+                $verifications
+            );
 
             return [
                 'success' => $response->successful(),
@@ -423,81 +425,82 @@ class BuroDeIngresosService
      */
     public function getProfile(): array
     {
-        try {
-            $response = $this->getHttpClient()->get("/profile/{$this->curp}");
+        $response = $this->getHttpClient()->get("/profile/{$this->curp}");
 
-            return [
-                'success' => $response->successful(),
-                'data' => $response->json(),
-                'http_code' => $response->status(),
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error al obtener perfil', [
-                'curp' => $this->curp,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Error de conexión con la API: ' . $e->getMessage(),
-                'http_code' => 0,
-            ];
-        }
+        return [
+            'success' => $response->successful(),
+            'data' => $response->json(),
+            'http_code' => $response->status(),
+        ];
     }
 
     /**
-     * Obtiene el historial de empleos
+     * Obtiene el historial de empleos del candidato con filtros opcionales
      */
-    public function getEmployments(): array
-    {
-        try {
-            $response = $this->getHttpClient()->get("/employments/{$this->curp}");
+    public function getEmployments(
+        int $page = 1,
+        int $itemsPerPage = 100,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
 
+        $queryParams = [
+            'page' => $page,
+            'items_per_page' => $itemsPerPage,
+        ];
 
-            return [
-                'success' => $response->successful(),
-                'data' => $response->json(),
-                'http_code' => $response->status(),
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error al obtener empleos', [
-                'curp' => $this->curp,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => 'Error de conexión con la API: ' . $e->getMessage(),
-                'http_code' => 0,
-            ];
+        if ($startDate) {
+            $queryParams['start_date'] = $startDate;
         }
+
+        if ($endDate) {
+            $queryParams['end_date'] = $endDate;
+        }
+
+        $response = $this->getHttpClient()->get("/employments/{$this->curp}", $queryParams);
+
+        return [
+            'success' => $response->successful(),
+            'data' => $response->json(),
+            'http_code' => $response->status(),
+        ];
     }
 
     /**
-     * Obtiene las invoices del candidato
+     * Obtiene las invoices del candidato con filtros opcionales
      */
-    public function getInvoices(): array
-    {
-        try {
-            $response = $this->getHttpClient()->get("/invoices/{$this->curp}");
+    public function getInvoices(
+        ?string $type = null,
+        int $page = 1,
+        int $itemsPerPage = 100,
+        ?string $startDate = null,
+        ?string $endDate = null
+    ): array {
 
-            return [
-                'success' => $response->successful(),
-                'data' => $response->json(),
-                'http_code' => $response->status(),
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error al obtener invoices', [
-                'curp' => $this->curp,
-                'error' => $e->getMessage(),
-            ]);
+        $queryParams = [
+            'page' => $page,
+            'items_per_page' => $itemsPerPage,
+        ];
 
-            return [
-                'success' => false,
-                'message' => 'Error de conexión con la API: ' . $e->getMessage(),
-                'http_code' => 0,
-            ];
+        if ($type) {
+            $queryParams['type'] = $type;
         }
+
+        if ($startDate) {
+            $queryParams['start_date'] = $startDate;
+        }
+
+        if ($endDate) {
+            $queryParams['end_date'] = $endDate;
+        }
+
+        $response = $this->getHttpClient()->get("/invoices/{$this->curp}", $queryParams);
+
+        return [
+            'success' => $response->successful(),
+            'data' => $response->json(),
+            'http_code' => $response->status(),
+        ];
     }
 
     /**
