@@ -99,7 +99,7 @@ class Candidato extends Model
             },
         );
     }
-    
+
 
     /**
      * Define la relación "uno a muchos" con los datos laborales del candidato.
