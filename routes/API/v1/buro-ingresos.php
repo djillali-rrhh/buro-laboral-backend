@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\BuroDeIngresosController;
 use Illuminate\Support\Facades\Route;
+use App\Models\RegistrosPalenca;
 
 // Rutas para Buró de Ingresos API
 
@@ -89,6 +90,9 @@ Route::prefix('buro-ingresos')->name('buro.')->group(function () {
     /**
      * WEBHOOKS
      */
+    Route::post('/webhook', [BuroDeIngresosController::class, 'receiveWebhook'])
+        ->name('webhooks.receive');
+
     Route::post('/webhooks', [BuroDeIngresosController::class, 'createWebhook'])
         ->name('webhooks.create');
 

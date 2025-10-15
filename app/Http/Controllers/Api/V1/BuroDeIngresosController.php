@@ -4,9 +4,17 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Services\BuroDeIngresos\BuroDeIngresosService;
+use App\Services\BuroDeIngresos\BuroDeIngresosWebhookService;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
+
+use App\Services\BuroDeIngresos\Actions\{
+    ProcessCandidatoDatos,
+    ProcessCandidatoDatosExtra,
+    ProcessCandidatoLaborales,
+    ProcessDocumentosSA,
+};
 
 /**
  * @OA\Tag(
@@ -1246,9 +1254,36 @@ use Illuminate\Http\Request;
  *     )
  * )
  * 
+ * @OA\Schema(
+ *     schema="WebhookEvent",
+ *     type="object",
+ *     title="Evento de Webhook",
+ *     description="Estructura estándar de un evento enviado por Buró de Ingresos vía webhook.",
+ *     required={"event", "verification_id", "identifier", "status", "timestamp"},
+ *     @OA\Property(property="event", type="string", example="verification.completed", description="Tipo de evento emitido."),
+ *     @OA\Property(property="verification_id", type="string", format="uuid", example="bd830637-ea6e-4888-80ab-a09f01fc9209", description="Identificador único de la verificación."),
+ *     @OA\Property(property="identifier", type="string", example="OICE940722HGFRST08", description="Identificador del candidato (CURP o RFC)."),
+ *     @OA\Property(property="status", type="string", enum={"in_progress","completed"}, example="completed", description="Estado actual de la verificación."),
+ *     @OA\Property(property="data_available", type="boolean", example=true, description="Indica si hay datos disponibles para consulta."),
+ *     @OA\Property(property="can_retry", type="boolean", example=false, description="Indica si el proceso puede volver a intentarse."),
+ *     @OA\Property(
+ *         property="entities",
+ *         type="array",
+ *         description="Lista de entidades incluidas en la verificación completada.",
+ *         @OA\Items(type="string", enum={"profile","employment","invoices"})
+ *     ),
+ *     @OA\Property(property="last_updated_at", type="string", format="date-time", example="2025-04-29T10:37:25Z", description="Última fecha de actualización de la verificación."),
+ *     @OA\Property(property="timestamp", type="string", format="date-time", example="2025-04-29T10:37:25Z", description="Fecha y hora exacta en que se envió el evento."),
+ *     @OA\Property(property="external_id", type="string", nullable=true, example=null, description="Identificador externo definido por el cliente.")
+ * )
  */
+
 class BuroDeIngresosController extends Controller
 {
+    public function __construct(
+        private readonly BuroDeIngresosWebhookService $webhookService
+    ) {}
+
     use ApiResponse;
 
     /**
@@ -1475,7 +1510,6 @@ class BuroDeIngresosController extends Controller
                 );
             }
 
-            // Retornar 202 Accepted en lugar de 200
             return response()->json([
                 'success' => true,
                 'message' => 'Verificación creada exitosamente',
@@ -1999,7 +2033,7 @@ class BuroDeIngresosController extends Controller
                 ->setCurp($identifier);
 
             $profile = $buroService->getProfile();
-            
+
 
             if (!$profile['success']) {
                 return $this->errorResponse(
@@ -2389,6 +2423,97 @@ class BuroDeIngresosController extends Controller
                 'Error al listar webhooks: ' . $e->getMessage(),
                 500
             );
+        }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/buro-ingresos/webhook",
+     *     summary="Recibir notificación de webhook",
+     *     description="Recibe notificaciones en tiempo real de Buró de Ingresos sobre el estado de verificaciones.",
+     *     tags={"Buró de ingresos - Webhooks"},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Payload enviado por Buró de Ingresos",
+     *         @OA\JsonContent(ref="#/components/schemas/WebhookEvent")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Webhook procesado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="ok"),
+     *             @OA\Property(property="received", ref="#/components/schemas/WebhookEvent")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Header de autenticación inválido o ausente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Header BURO_INGRESOS_WEBHOOK_KEY inválido o ausente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor"
+     *     ),
+     *     @OA\Parameter(
+     *         name="BURO_INGRESOS_WEBHOOK_KEY",
+     *         in="header",
+     *         required=true,
+     *         description="Clave secreta configurada para validar la autenticidad del webhook",
+     *         @OA\Schema(type="string", example="8f08e11719e2ffa2daf29b4911d324b44453c75a90070e03")
+     *     )
+     * )
+     */
+    public function receiveWebhook(Request $request)
+    {
+        try {
+            // Validar header de autenticación
+            $webhookKey = $request->header('BURO_INGRESOS_WEBHOOK_KEY');
+            $expectedKey = env('BURO_INGRESOS_WEBHOOK_KEY');
+
+            if ($webhookKey !== $expectedKey) {
+                return response()->json([
+                    'status' => 'ok',
+                    'message' => 'received'
+                ], 200);
+            }
+
+            $payload = $request->all();
+
+            $service = new BuroDeIngresosWebhookService(
+                app(BuroDeIngresosService::class)
+            );
+
+            // Agregar los comandos que quieras
+            $service->setPayload($payload)
+                ->addCommand(ProcessCandidatoDatos::class)
+                ->addCommand(ProcessCandidatoDatosExtra::class)
+                ->addCommand(ProcessCandidatoLaborales::class)
+                ->addCommand(ProcessDocumentosSA::class);
+
+
+            // Ejecutar todo
+            $result = $service->execute();
+
+            return response()->json([
+                'status' => 'ok',
+                'received' => $payload,
+                'processed' => $result
+            ], 200);
+        } catch (\Exception $e) {
+            Log::channel('buro_ingreso')->error('Error crítico en webhook', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'payload' => $request->all()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error interno procesando webhook',
+                'received' => $request->all()
+            ], 200);
         }
     }
 }
