@@ -6,7 +6,7 @@ use App\Services\BuroDeIngresos\BuroDeIngresosService;
 
 class RetryAction extends WebhookAction
 {
-    public function execute(): void
+    protected function handle(): void
     {
         $this->log('Iniciando reintento de verificación');
 

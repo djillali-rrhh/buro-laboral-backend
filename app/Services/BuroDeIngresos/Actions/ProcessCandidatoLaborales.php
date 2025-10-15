@@ -6,7 +6,7 @@ use App\Models\CandidatosLaborales;
 
 class ProcessCandidatoLaborales extends WebhookAction
 {
-    public function execute(): void
+    protected function handle(): void
     {
         if (!$this->employment || empty($this->employment->employment_history)) {
             $this->log('No hay historial laboral para guardar');

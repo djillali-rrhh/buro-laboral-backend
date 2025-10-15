@@ -9,6 +9,13 @@ use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 
+use App\Services\BuroDeIngresos\Actions\{
+    ProcessCandidatoDatos,
+    ProcessCandidatoDatosExtra,
+    ProcessCandidatoLaborales,
+    ProcessDocumentosSA,
+};
+
 /**
  * @OA\Tag(
  *     name="Buró de ingresos - Consentimientos",
@@ -2465,7 +2472,7 @@ class BuroDeIngresosController extends Controller
             // Validar header de autenticación
             $webhookKey = $request->header('BURO_INGRESOS_WEBHOOK_KEY');
             $expectedKey = env('BURO_INGRESOS_WEBHOOK_KEY');
-            
+
             if ($webhookKey !== $expectedKey) {
                 return response()->json([
                     'status' => 'ok',
@@ -2475,14 +2482,26 @@ class BuroDeIngresosController extends Controller
 
             $payload = $request->all();
 
-            $resultado = $this->webhookService->processWebhook($payload);
+            $service = new BuroDeIngresosWebhookService(
+                app(BuroDeIngresosService::class)
+            );
+
+            // Agregar los comandos que quieras
+            $service->setPayload($payload)
+                ->addCommand(ProcessCandidatoDatos::class)
+                ->addCommand(ProcessCandidatoDatosExtra::class)
+                ->addCommand(ProcessCandidatoLaborales::class)
+                ->addCommand(ProcessDocumentosSA::class);
+
+
+            // Ejecutar todo
+            $result = $service->execute();
 
             return response()->json([
                 'status' => 'ok',
                 'received' => $payload,
-                'processed' => $resultado
+                'processed' => $result
             ], 200);
-            
         } catch (\Exception $e) {
             Log::channel('buro_ingreso')->error('Error crítico en webhook', [
                 'error' => $e->getMessage(),

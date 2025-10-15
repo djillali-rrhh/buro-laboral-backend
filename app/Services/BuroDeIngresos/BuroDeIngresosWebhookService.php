@@ -2,13 +2,7 @@
 
 namespace App\Services\BuroDeIngresos;
 
-use App\Services\BuroDeIngresos\Actions\{
-    RetryAction,
-    ProcessCandidatoDatos,
-    ProcessCandidatoDatosExtra,
-    ProcessCandidatoLaborales,
-    ProcessDocumentosSA,
-};
+use App\Services\BuroDeIngresos\Actions\RetryAction;
 use App\Services\BuroDeIngresos\DTOs\BuroWebhookDTO;
 use App\Services\BuroDeIngresos\DTOs\CandidatoEmploymentsDTO;
 use App\Services\BuroDeIngresos\DTOs\CandidatoProfileDTO;
@@ -17,9 +11,27 @@ use App\Models\RegistrosPalenca;
 
 class BuroDeIngresosWebhookService
 {
+    private array $commands = [];
+    private array $payload;
+    private ?BuroWebhookDTO $webhook = null;
+    private ?CandidatoProfileDTO $profile = null;
+    private ?CandidatoEmploymentsDTO $employment = null;
+    private ?RegistrosPalenca $palenca = null;
+    private ?array $rawProfile = null;
+    private ?array $rawEmployment = null;
+
     public function __construct(
         private readonly BuroDeIngresosService $buroService,
     ) {}
+
+    /**
+     * Configura el payload para procesar
+     */
+    public function setPayload(array $payload): self
+    {
+        $this->payload = $payload;
+        return $this;
+    }
 
     /**
      * Log helper
@@ -30,97 +42,96 @@ class BuroDeIngresosWebhookService
     }
 
     /**
-    * Procesa el webhook recibido
-    * @param array $payload
-    * @return array
-    */
-    public function processWebhook(array $payload): array
+     * Agrega un comando a la cola de ejecución
+     */
+    public function addCommand(string $commandClass): self
     {
-        $this->log($payload['identifier'] ?? 'unknown', 'Webhook recibido', ['payload' => $payload]);
+        $this->commands[] = $commandClass;
+        return $this;
+    }
 
-        $webhook = new BuroWebhookDTO($payload);
+    /**
+     * Procesa el webhook y ejecuta todos los comandos
+     */
+    public function execute(): array
+    {
+        $this->log($this->payload['identifier'] ?? 'unknown', 'Webhook recibido', ['payload' => $this->payload]);
 
-        $palenca = RegistrosPalenca::getLastByCurp($webhook->identifier);
-        if (!$palenca) {
-            $this->log($webhook->identifier, 'No se encontró un registro de Palenca para este CURP');
+        $this->webhook = new BuroWebhookDTO($this->payload);
 
+        $this->palenca = RegistrosPalenca::getLastByCurp($this->webhook->identifier);
+        if (!$this->palenca) {
+            $this->log($this->webhook->identifier, 'No se encontró un registro de Palenca para este CURP');
             return ['message' => 'No se encontró un registro de Palenca para este CURP'];
         }
 
-        $this->log($webhook->identifier, 'Registro de Palenca encontrado', ['registro_id' => $palenca->id]);
+        $this->log($this->webhook->identifier, 'Registro de Palenca encontrado', ['registro_id' => $this->palenca->id]);
 
-        if (!$webhook->isCompleted()) {
-            $this->log($webhook->identifier, "Estado de verificación no es 'completed'", ['status' => $webhook->status]);
-            $this->updatePalencaLog($palenca, $payload);
+        if (!$this->webhook->isCompleted()) {
+            $this->log($this->webhook->identifier, "Estado de verificación no es 'completed'", ['status' => $this->webhook->status]);
+            $this->updatePalencaLog($this->palenca, $this->payload);
             return ['message' => "Estado de verificación no es 'completed'"];
         }
 
-        if ($webhook->can_retry) {
-            $retryAction = new RetryAction($webhook);
-            $retryAction->execute();
-
-            $this->log($webhook->identifier, 'Reintento de verificación de datos');
+        if ($this->webhook->can_retry) {
+            $retryAction = new RetryAction();
+            $retryAction->execute($this->webhook, $this->profile, $this->employment, $this->palenca->Candidato);
+            
+            $this->log($this->webhook->identifier, 'Reintento de verificación de datos');
             return ['message' => 'Reintento de verificación iniciado'];
         }
 
-        if (!$webhook->data_available) {
-            $this->log($webhook->identifier, 'La verificación no encontró datos');
+        if (!$this->webhook->data_available) {
+            $this->log($this->webhook->identifier, 'La verificación no encontró datos');
             return ['message' => 'Datos no disponibles'];
         }
 
-        $employment = null;
-        $rawEmployment = null;
-        if ($webhook->hasEntity(BuroWebhookDTO::ENTITY_EMPLOYMENT)) {
-            $this->log($webhook->identifier, 'Datos de empleo disponibles');
-            $rawEmployment = $this->buroService
-                ->setCurp($webhook->identifier)
+        // Obtener datos de empleo
+        if ($this->webhook->hasEntity(BuroWebhookDTO::ENTITY_EMPLOYMENT)) {
+            $this->log($this->webhook->identifier, 'Datos de empleo disponibles');
+            $this->rawEmployment = $this->buroService
+                ->setCurp($this->webhook->identifier)
                 ->getEmployments();
 
-            if ($rawEmployment["http_code"] === 200) {
-                $employment = new CandidatoEmploymentsDTO($rawEmployment["data"]);
+            if ($this->rawEmployment["http_code"] === 200) {
+                $this->employment = new CandidatoEmploymentsDTO($this->rawEmployment["data"]);
             } else {
-                $this->log($webhook->identifier, 'Error al obtener datos de empleo', ['error' => $rawEmployment['error']]);
+                $this->log($this->webhook->identifier, 'Error al obtener datos de empleo', ['error' => $this->rawEmployment['error']]);
             }
         }
 
-
-        $profile = null;
-        $rawProfile = null;
-        if ($webhook->hasEntity(BuroWebhookDTO::ENTITY_PROFILE)) {
-            $this->log($webhook->identifier, 'Datos de perfil disponibles');
-            $rawProfile = $this->buroService
-                ->setCurp($webhook->identifier)
+        // Obtener datos de perfil
+        if ($this->webhook->hasEntity(BuroWebhookDTO::ENTITY_PROFILE)) {
+            $this->log($this->webhook->identifier, 'Datos de perfil disponibles');
+            $this->rawProfile = $this->buroService
+                ->setCurp($this->webhook->identifier)
                 ->getProfile();
 
-            if ($rawProfile["http_code"] === 200) {
-                $profile = new CandidatoProfileDTO($rawProfile["data"]);
+            if ($this->rawProfile["http_code"] === 200) {
+                $this->profile = new CandidatoProfileDTO($this->rawProfile["data"]);
             } else {
-                $this->log($webhook->identifier, 'Error al obtener datos de perfil', ['error' => $rawProfile['error']]);
+                $this->log($this->webhook->identifier, 'Error al obtener datos de perfil', ['error' => $this->rawProfile['error']]);
             }
         }
 
         // Actualizar registro de Palenca con los datos completos
-        $this->updatePalencaLog($palenca, $payload, $rawProfile, $rawEmployment);
+        $this->updatePalencaLog($this->palenca, $this->payload, $this->rawProfile, $this->rawEmployment);
 
-        // Ejecutar el resto de las actions
-        (new ProcessCandidatoDatos($webhook, $profile, $employment))->execute();
-        (new ProcessCandidatoDatosExtra($webhook, $profile, $employment))->execute();
-        (new ProcessCandidatoLaborales($webhook, $profile, $employment))->execute();
-        (new ProcessDocumentosSA($webhook, $profile, $employment))->execute();
-
-        // TODO: revisar si se debe conservar este bloque
-        // Después de ejecutar las actions, validar si faltan datos
-        $hasNSS = $profile && $profile->personal_info->nss;
-        $hasHistory = $employment && !empty($employment->employment_history);
-
-        if (!$hasNSS || !$hasHistory) {
-            if (!$webhook->can_retry) {
-                (new ProcessCandidatoDatosExtra($webhook, $profile, $employment))
-                    ->markForSubdelegation();
+        // Ejecutar todos los comandos agregados
+        foreach ($this->commands as $commandClass) {
+            try {
+                $command = new $commandClass();
+                $command->execute($this->webhook, $this->profile, $this->employment, $this->palenca->Candidato);
+            } catch (\Exception $e) {
+                $this->log($this->webhook->identifier, "Error ejecutando comando {$commandClass}", [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                continue;
             }
         }
 
-        $this->log($webhook->identifier, 'Webhook procesado completamente');
+        $this->log($this->webhook->identifier, 'Webhook procesado completamente');
 
         return ['message' => 'Webhook procesado completamente'];
     }
@@ -138,7 +149,6 @@ class BuroDeIngresosWebhookService
         ?array $profile = null,
         ?array $employment = null
     ): void {
-
         $accion = $webhook['status'] ?? 'unknown';
 
         switch ($accion) {

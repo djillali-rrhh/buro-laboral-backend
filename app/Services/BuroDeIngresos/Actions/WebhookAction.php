@@ -11,31 +11,34 @@ use Illuminate\Support\Facades\Log;
 abstract class WebhookAction
 {
     protected BuroWebhookDTO $webhook;
-    protected array $webhookRaw;
     protected ?CandidatoProfileDTO $profile;
     protected ?CandidatoEmploymentsDTO $employment;
     protected ?int $candidatoId;
 
-    public function __construct(
+    /**
+     * Ejecuta la acción con los datos proporcionados
+     */
+    public function execute(
         BuroWebhookDTO $webhook,
         ?CandidatoProfileDTO $profile = null,
         ?CandidatoEmploymentsDTO $employment = null,
         ?int $candidatoId = null
-    ) {
+    ): void {
         $this->webhook = $webhook;
         $this->profile = $profile;
         $this->employment = $employment;
         $this->candidatoId = $candidatoId;
 
+        $this->handle();
     }
 
     /**
-     * Ejecuta la acción
+     * Lógica principal de la acción
      */
-    abstract public function execute(): void;
+    abstract protected function handle(): void;
 
     /**
-     * Obtiene el candidato ID (lazy loading)
+     * Obtiene el candidato
      */
     protected function getCandidatoId(): int
     {

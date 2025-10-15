@@ -6,7 +6,7 @@ use App\Models\CandidatosDatos;
 
 class ProcessCandidatoDatos extends WebhookAction
 {
-    public function execute(): void
+    protected function handle(): void
     {
         if (!$this->profile || !$this->profile->personal_info->nss) {
             $this->log('No hay NSS para guardar en CandidatosDatos');

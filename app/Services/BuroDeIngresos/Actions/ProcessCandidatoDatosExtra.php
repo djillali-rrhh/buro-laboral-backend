@@ -6,9 +6,20 @@ use App\Models\CandidatosDatosExtra;
 
 class ProcessCandidatoDatosExtra extends WebhookAction
 {
-    public function execute(): void
+    protected function handle(): void
     {
         $candidatoId = $this->getCandidatoId();
+
+        // Verificar si faltan datos y no se puede reintentar
+        $hasNSS = $this->profile && $this->profile->personal_info->nss;
+        $hasHistory = $this->employment && !empty($this->employment->employment_history);
+
+        if (!$hasNSS || !$hasHistory) {
+            if (!$this->webhook->can_retry) {
+                $this->markForSubdelegation($candidatoId);
+                return;
+            }
+        }
 
         // Datos base a actualizar siempre
         $dataToUpdate = [
@@ -41,10 +52,8 @@ class ProcessCandidatoDatosExtra extends WebhookAction
     /**
      * Marca al candidato para ir a subdelegación
      */
-    public function markForSubdelegation(): void
+    private function markForSubdelegation(int $candidatoId): void
     {
-        $candidatoId = $this->getCandidatoId();
-
         CandidatosDatosExtra::updateOrCreate(
             ['Candidato' => $candidatoId],
             [
