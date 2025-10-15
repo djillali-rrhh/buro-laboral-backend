@@ -133,6 +133,13 @@ return [
             'level' => 'info',
             'days' => 30,
         ],
+
+        "nubarium" => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/nubarium.log'),
+            'level' => 'info',
+            'days' => 30
+        ]
     ],
 
 ];
