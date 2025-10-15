@@ -36,16 +36,18 @@ return [
     ],
 
     'poder_judicial' => [
-    'base_uri' => env('PODER_JUDICIAL_API_URL'),
-    'secret' => env('PODER_JUDICIAL_API_KEY'),
-
+        'base_uri' => env('PODER_JUDICIAL_API_URL'),
+        'secret' => env('PODER_JUDICIAL_API_KEY'),
     ],
+
+    'ingenia' => [
+        'base_uri' => env('INGENIA_API_URL'), 
+    ],
+  
     'buro_de_ingresos' => [
         'api_key' => env('BURO_INGRESOS_API_KEY'),
         'webhook_key' => env('BURO_INGRESOS_WEBHOOK_KEY'),
         'base_url' => env('BURO_INGRESOS_API_BASE_URL'),
         'sandbox_mode' => env('BURO_INGRESOS_SANDBOX_MODE', true),
-    ],
-
-   
+    ],   
 ];

@@ -127,6 +127,12 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'ingenia_api' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/ingenia_api.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
         'buro_ingreso' => [
             'driver' => 'daily',
             'path' => storage_path('logs/buro_ingreso_webhook.log'),
