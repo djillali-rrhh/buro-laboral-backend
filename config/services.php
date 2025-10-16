@@ -50,4 +50,10 @@ return [
         'base_url' => env('BURO_INGRESOS_API_BASE_URL'),
         'sandbox_mode' => env('BURO_INGRESOS_SANDBOX_MODE', true),
     ],   
+
+    'apimarket' => [
+        'api_url' => env('APIMARKET_API_URL'),
+        'token' => env('APIMARKET_TOKEN'),
+        'sandbox' => env('APIMARKET_SANDBOX', false),
+    ],
 ];
