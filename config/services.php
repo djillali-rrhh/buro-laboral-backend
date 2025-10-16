@@ -49,6 +49,7 @@ return [
         'webhook_key' => env('BURO_INGRESOS_WEBHOOK_KEY'),
         'base_url' => env('BURO_INGRESOS_API_BASE_URL'),
         'sandbox_mode' => env('BURO_INGRESOS_SANDBOX_MODE', true),
+
     ],
     
     'sendgrid' => [
@@ -56,3 +57,12 @@ return [
         'sandbox' => env('SENDGRID_SANDBOX_MODE', true),
     ],
 ];
+    ],   
+
+    'apimarket' => [
+        'api_url' => env('APIMARKET_API_URL'),
+        'token' => env('APIMARKET_TOKEN'),
+        'sandbox' => env('APIMARKET_SANDBOX', false),
+    ],
+];
+
