@@ -7,17 +7,6 @@ use Illuminate\Support\Facades\Log;
 class AttachmentHelper
 {
     /**
-     * Context manager para attachments temporales
-     * 
-     * Uso:
-     * AttachmentHelper::withTemp(function($temp) {
-     *     $attachments = [
-     *         $temp->fromUrl('https://...'),
-     *         $temp->fromBase64($base64, 'file.pdf')
-     *     ];
-     *     // Hacer algo con $attachments
-     * });
-     * 
      * Los archivos se limpian automáticamente al salir
      */
     public static function withTemp(callable $callback)

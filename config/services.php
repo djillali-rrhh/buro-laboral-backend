@@ -52,7 +52,7 @@ return [
     ],
     
     'sendgrid' => [
-        'api_key' => env('SENDGRID_API_KEY'),
-        'enabled' => env('SENDGRID_ENABLED', false),
+        'key' => env('SENDGRID_API_KEY'),
+        'sandbox_mode' => env('SENDGRID_SANDBOX_MODE', true),
     ],
 ];

@@ -2,161 +2,112 @@
 
 namespace App\Services\EmailService;
 
-use App\Mail\DynamicEmail;
-use Illuminate\Support\Facades\Mail;
+use App\Jobs\SendEmailJob;
 
+/**
+ * Servicio de correo electrónico que utiliza una estrategia para enviar correos.
+ */
 class EmailService
 {
-    protected $sendGridService;
+    protected string $strategy;
 
-    public function __construct()
+    public function __construct(string $strategy = 'smtp')
     {
-        $this->sendGridService = new SendGridService();
+        $this->strategy = $strategy;
     }
 
     /**
-     * Enviar email con plantilla dinámica
+     * Envía un email de forma síncrona
+     * @param array $data Datos del email
+     *  - from: string (email del remitente)
+     *  - from_name: string|null (nombre del remitente)
+     *  - to: array|string (destinatarios)
+     *  - cc: array|string|null (copias)
+     *  - bcc: array|string|null (copias ocultas)
+     *  - reply_to: array|string|null (responder a)
+     *  - subject: string (asunto)
+     *  - html: string|null (contenido HTML)
+     *  - text: string|null (contenido texto plano)
+     *  - attachments: array|null (archivos adjuntos)
+     *  - mailable: string|null (clase Mailable de Laravel)
+     *  - view: string|null (vista de Laravel)
+     *  - view_data: array|null (datos para la vista)
+     *  - priority: int|null (1=highest, 5=lowest)
+     *  - headers: array|null (cabeceras personalizadas)
+     * @return bool
      */
-    public function sendTemplateEmail(string $template, array $variables, array $options): bool
+    public function send(array $data): bool
     {
-        $from = $options['from'] ?? config('mail.from.address');
-        $fromName = config('mail.from.name');
-        $to = $options['to'];
-        $cc = $options['cc'] ?? [];
-        $bcc = $options['bcc'] ?? [];
-        $subject = $options['subject'];
-        $attachments = $options['attachments'] ?? [];
-        $triggeredBy = $options['triggered_by'] ?? 'system';
+        $strategyInstance = $this->resolveStrategy();
+        return $strategyInstance->send($data);
+    }
 
-        // Validar y limpiar destinatarios
-        $cleanedRecipients = $this->cleanRecipients($to, $cc, $bcc);
+    /**
+     * Envía un email a través de cola
+     * @param array $data Datos del email
+     * @param string|null $queue Nombre de la cola (opcional)
+     * @param int|null $delay Segundos de delay (opcional)
+     * @return \Illuminate\Foundation\Bus\PendingDispatch
+     */
+    public function queue(array $data, ?string $queue = null, ?int $delay = null)
+    {
+        if ($queue) {
+            $data['queue'] = $queue;
+        }
 
-        // Renderizar la vista Blade a HTML
-        $htmlContent = view("emails.{$template}", $variables)->render();
+        if ($delay) {
+            $data['delay'] = $delay;
+        }
 
-        // Decidir si usar SendGrid API o Laravel Mail
-        if ($this->sendGridService->isEnabled()) {
-            // Usar SendGrid API
-            $result = $this->sendGridService->send(
-                from: $from,
-                fromName: $fromName,
-                to: $cleanedRecipients['to'],
-                subject: $subject,
-                htmlContent: $htmlContent,
-                cc: $cleanedRecipients['cc'],
-                bcc: $cleanedRecipients['bcc'],
-                attachments: $attachments
-            );
+        return SendEmailJob::dispatch($data, $this->strategy);
+    }
 
-            return $result['success'];
-        } else {
-            // Usar Laravel Mail (Mailtrap u otro SMTP)
-            $mailable = new DynamicEmail(
-                view: "emails.{$template}",
-                data: $variables,
-                subject: $subject,
-                attachments: $attachments
-            );
+    /**
+     * Envía un email a través de cola con delay
+     * @param array $data Datos del email
+     * @param int $seconds Segundos de delay
+     * @param string|null $queue Nombre de la cola (opcional)
+     * @return \Illuminate\Foundation\Bus\PendingDispatch
+     */
+    public function later(array $data, int $seconds, ?string $queue = null)
+    {
+        return $this->queue($data, $queue, $seconds);
+    }
 
-            $mailable->from($from, $fromName);
-
-            $mailInstance = Mail::to($cleanedRecipients['to']);
-
-            if (!empty($cleanedRecipients['cc'])) {
-                $mailInstance->cc($cleanedRecipients['cc']);
-            }
-
-            if (!empty($cleanedRecipients['bcc'])) {
-                $mailInstance->bcc($cleanedRecipients['bcc']);
-            }
-
-            $mailInstance->send($mailable);
-
-            return true;
+    /**
+     * Envía múltiples emails en cola
+     * @param array $emails Array de datos de emails
+     * @param string|null $queue Nombre de la cola (opcional)
+     * @return void
+     */
+    public function queueBulk(array $emails, ?string $queue = null): void
+    {
+        foreach ($emails as $emailData) {
+            $this->queue($emailData, $queue);
         }
     }
 
     /**
-     * Enviar email simple sin plantilla
+     * Cambiar la estrategia en tiempo de ejecución
+     * @param string $strategy Nueva estrategia
+     * @return $this
      */
-    public function sendBasicEmail(string $body, array $options): bool
+    public function setStrategy(string $strategy): self
     {
-        $from = $options['from'] ?? config('mail.from.address');
-        $fromName = config('mail.from.name');
-        $to = $options['to'];
-        $cc = $options['cc'] ?? [];
-        $bcc = $options['bcc'] ?? [];
-        $subject = $options['subject'];
-        $triggeredBy = $options['triggered_by'] ?? 'system';
-
-        $cleanedRecipients = $this->cleanRecipients($to, $cc, $bcc);
-
-        if ($this->sendGridService->isEnabled()) {
-            // Usar SendGrid API
-            $result = $this->sendGridService->send(
-                from: $from,
-                fromName: $fromName,
-                to: $cleanedRecipients['to'],
-                subject: $subject,
-                htmlContent: $body,
-                cc: $cleanedRecipients['cc'],
-                bcc: $cleanedRecipients['bcc'],
-                attachments: []
-            );
-
-            return $result['success'];
-        } else {
-            // Usar Laravel Mail
-            Mail::html($body, function ($message) use ($from, $fromName, $cleanedRecipients, $subject) {
-                $message->from($from, $fromName)
-                    ->to($cleanedRecipients['to'])
-                    ->subject($subject);
-
-                if (!empty($cleanedRecipients['cc'])) {
-                    $message->cc($cleanedRecipients['cc']);
-                }
-
-                if (!empty($cleanedRecipients['bcc'])) {
-                    $message->bcc($cleanedRecipients['bcc']);
-                }
-            });
-
-            return true;
-        }
+        $this->strategy = $strategy;
+        return $this;
     }
 
     /**
-     * Limpiar y validar destinatarios
+     * Resolver la estrategia desde el string
+     * @return EmailStrategyInterface
      */
-    private function cleanRecipients($to, $cc, $bcc): array
+    protected function resolveStrategy()
     {
-        $toList = is_array($to) ? $to : [$to];
-        $ccList = is_array($cc) ? $cc : ($cc ? [$cc] : []);
-        $bccList = is_array($bcc) ? $bcc : ($bcc ? [$bcc] : []);
-
-        $toList = array_filter($toList, fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL));
-        $ccList = array_filter($ccList, fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL));
-        $bccList = array_filter($bccList, fn($email) => filter_var($email, FILTER_VALIDATE_EMAIL));
-
-        $toList = array_unique($toList);
-        $ccList = array_unique($ccList);
-        $bccList = array_unique($bccList);
-
-        $toLower = array_map('strtolower', $toList);
-        $ccList = array_filter($ccList, fn($email) => !in_array(strtolower($email), $toLower));
-
-        $ccLower = array_map('strtolower', $ccList);
-        $bccList = array_filter(
-            $bccList,
-            fn($email) =>
-            !in_array(strtolower($email), $toLower) &&
-                !in_array(strtolower($email), $ccLower)
-        );
-
-        return [
-            'to' => array_values($toList),
-            'cc' => array_values($ccList),
-            'bcc' => array_values($bccList)
-        ];
+        return match ($this->strategy) {
+            'sendgrid' => new \App\Services\EmailService\Strategies\SendGridEmailStrategy(),
+            'smtp' => new \App\Services\EmailService\Strategies\SmtpEmailStrategy(),
+            default => new \App\Services\EmailService\Strategies\SmtpEmailStrategy(),
+        };
     }
 }
