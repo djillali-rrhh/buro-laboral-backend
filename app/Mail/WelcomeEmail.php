@@ -40,7 +40,7 @@ class WelcomeEmail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.welcome',
+            view: 'emails.templates.notification',
             with: [
                 'name' => $this->userName,
                 'verificationUrl' => $this->verificationUrl,
