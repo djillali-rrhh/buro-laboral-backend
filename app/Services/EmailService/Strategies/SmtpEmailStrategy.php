@@ -1,56 +1,79 @@
 <?php
+
 namespace App\Services\EmailService\Strategies;
 
 use App\Services\EmailService\Contracts\EmailStrategyInterface;
 use App\Services\EmailService\Traits\NormalizesEmailData;
+use App\Services\EmailService\Traits\HasEmailLogging;
+use App\Services\EmailService\Traits\LogsEmails;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Log;
 
+/**
+ * Estrategia para enviar correos electrónicos usando SMTP.
+ *
+ * @package App\Services\EmailService\Strategies
+ */
 class SmtpEmailStrategy implements EmailStrategyInterface
 {
-    use NormalizesEmailData;
+    use NormalizesEmailData, HasEmailLogging, LogsEmails;
 
     public function send(array $data): bool
     {
+        $startTime = microtime(true);
+        $emailLog = null;
+
         try {
             // Normalizar y validar datos
             $data = $this->normalizeData($data);
             $this->validateData($data);
 
+            // Crear registro de log
+            $emailLog = $this->createEmailLog($data, 'smtp');
+
+            // Log inicio
+            $this->logSendingEmail($data);
+
             // Si es un Mailable, enviarlo directamente
             if (!empty($data['mailable'])) {
-                return $this->sendMailable($data);
+                $result = $this->sendMailable($data);
+                
+                if ($result) {
+                    // Log de éxito
+                    if ($emailLog) {
+                        $this->logEmailSuccess($emailLog, $startTime);
+                    }
+                    $this->logEmailSent($data);
+                    return true;
+                }
+                
+                // Log de fallo
+                if ($emailLog) {
+                    $this->logEmailFailure($emailLog, 'Error al enviar Mailable');
+                }
+                return false;
             }
 
             // Enviar usando Mail::html
             Mail::html($data['html'] ?? $data['text'], function ($message) use ($data) {
-                // Remitente
                 $message->from($data['from'], $data['from_name'] ?? null);
-                
-                // Asunto
                 $message->subject($data['subject']);
                 
-                // Destinatarios
                 foreach ($data['to'] as $recipient) {
                     $message->to($recipient['email'], $recipient['name']);
                 }
                 
-                // CC
                 foreach ($data['cc'] as $cc) {
                     $message->cc($cc['email'], $cc['name']);
                 }
                 
-                // BCC
                 foreach ($data['bcc'] as $bcc) {
                     $message->bcc($bcc['email'], $bcc['name']);
                 }
                 
-                // Reply To
                 foreach ($data['reply_to'] as $replyTo) {
                     $message->replyTo($replyTo['email'], $replyTo['name']);
                 }
                 
-                // Adjuntos
                 foreach ($data['attachments'] as $file) {
                     if ($file['disposition'] === 'inline') {
                         $message->attachData(
@@ -66,12 +89,10 @@ class SmtpEmailStrategy implements EmailStrategyInterface
                     }
                 }
                 
-                // Prioridad
                 if (!empty($data['priority'])) {
                     $message->priority($data['priority']);
                 }
                 
-                // Headers personalizados
                 if (!empty($data['headers'])) {
                     foreach ($data['headers'] as $key => $value) {
                         $message->getHeaders()->addTextHeader($key, $value);
@@ -79,50 +100,98 @@ class SmtpEmailStrategy implements EmailStrategyInterface
                 }
             });
 
-            Log::info("[SMTP] Correo enviado exitosamente", [
-                'to' => array_column($data['to'], 'email'),
-                'subject' => $data['subject']
-            ]);
+            // Log de éxito
+            if ($emailLog) {
+                $this->logEmailSuccess($emailLog, $startTime);
+            }
+            $this->logEmailSent($data);
 
             return true;
         } catch (\Exception $e) {
-            Log::error("[SMTP] Error enviando correo", [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+            // Log de excepción
+            if ($emailLog) {
+                $this->logEmailFailure(
+                    $emailLog,
+                    $e->getMessage(),
+                    null,
+                    [
+                        'exception_class' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => $e->getTraceAsString()
+                    ]
+                );
+            }
+
+            $this->logException($e, $data);
             return false;
         }
     }
 
     /**
-     * Envía un Mailable de Laravel
+     * Envía un Mailable de Laravel.
+     *
+     * @param array $data Datos del email con mailable incluido
+     * @return bool
      */
     protected function sendMailable(array $data): bool
     {
-        $mailable = $this->resolveMailable($data['mailable']);
-        
-        // Aplicar configuraciones adicionales
-        if (!empty($data['to'])) {
-            $recipients = array_map(function($r) {
-                return $r['name'] ? [$r['email'], $r['name']] : $r['email'];
-            }, $data['to']);
-            $mailable->to($recipients);
-        }
-        
-        if (!empty($data['cc'])) {
-            foreach ($data['cc'] as $cc) {
-                $mailable->cc($cc['email'], $cc['name']);
+        try {
+            $mailable = $this->resolveMailable($data['mailable']);
+            
+            // Aplicar destinatarios si se proporcionaron
+            if (!empty($data['to'])) {
+                foreach ($data['to'] as $recipient) {
+                    if (!empty($recipient['name'])) {
+                        $mailable->to($recipient['email'], $recipient['name']);
+                    } else {
+                        $mailable->to($recipient['email']);
+                    }
+                }
             }
-        }
-        
-        if (!empty($data['bcc'])) {
-            foreach ($data['bcc'] as $bcc) {
-                $mailable->bcc($bcc['email'], $bcc['name']);
+            
+            // Aplicar CC
+            if (!empty($data['cc'])) {
+                foreach ($data['cc'] as $cc) {
+                    if (!empty($cc['name'])) {
+                        $mailable->cc($cc['email'], $cc['name']);
+                    } else {
+                        $mailable->cc($cc['email']);
+                    }
+                }
             }
-        }
+            
+            // Aplicar BCC
+            if (!empty($data['bcc'])) {
+                foreach ($data['bcc'] as $bcc) {
+                    if (!empty($bcc['name'])) {
+                        $mailable->bcc($bcc['email'], $bcc['name']);
+                    } else {
+                        $mailable->bcc($bcc['email']);
+                    }
+                }
+            }
 
-        Mail::send($mailable);
-        
-        return true;
+            // Aplicar Reply-To
+            if (!empty($data['reply_to'])) {
+                foreach ($data['reply_to'] as $replyTo) {
+                    if (!empty($replyTo['name'])) {
+                        $mailable->replyTo($replyTo['email'], $replyTo['name']);
+                    } else {
+                        $mailable->replyTo($replyTo['email']);
+                    }
+                }
+            }
+
+            // Enviar
+            Mail::send($mailable);
+            
+            $this->logEmailSent($data);
+            
+            return true;
+        } catch (\Exception $e) {
+            $this->logException($e, $data);
+            return false;
+        }
     }
 }

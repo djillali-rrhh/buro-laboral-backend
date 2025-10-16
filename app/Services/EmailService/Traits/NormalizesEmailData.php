@@ -36,6 +36,7 @@ trait NormalizesEmailData
         }
         
         if (is_string($recipients)) {
+            // 'user@example.com' -> [['email' => 'user@example.com', 'name' => null]]
             return [['email' => $recipients, 'name' => null]];
         }
         
@@ -48,7 +49,7 @@ trait NormalizesEmailData
                     'name' => $value['name'] ?? $value[1] ?? null
                 ];
             } else {
-                // ['test@test.com'] o ['test@test.com' => 'Test Name']
+                // 'test@test.com' o 'test@test.com' => 'Test Name'
                 $normalized[] = [
                     'email' => is_numeric($key) ? $value : $key,
                     'name' => is_numeric($key) ? null : $value
@@ -58,7 +59,7 @@ trait NormalizesEmailData
         
         return $normalized;
     }
-
+    
     /**
      * Normaliza adjuntos
      */

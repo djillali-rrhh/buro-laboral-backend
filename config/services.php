@@ -53,6 +53,6 @@ return [
     
     'sendgrid' => [
         'key' => env('SENDGRID_API_KEY'),
-        'sandbox_mode' => env('SENDGRID_SANDBOX_MODE', true),
+        'sandbox' => env('SENDGRID_SANDBOX_MODE', true),
     ],
 ];

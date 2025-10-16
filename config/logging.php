@@ -145,6 +145,13 @@ return [
             'path' => storage_path('logs/nubarium.log'),
             'level' => 'info',
             'days' => 30
+        ],
+
+        "emails" => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/emails.log'),
+            'level' => 'info',
+            'days' => 30
         ]
     ],
 

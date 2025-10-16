@@ -1,5 +1,7 @@
 <?php
 
+// TODO: revisar si esto será necesario en el futuro
+
 namespace App\Services\EmailService\Helpers;
 
 use Illuminate\Support\Facades\Log;
