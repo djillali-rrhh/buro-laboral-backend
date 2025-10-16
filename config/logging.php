@@ -153,6 +153,11 @@ return [
             'level' => 'debug',
         ],
 
+        'whatsapp_api' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/whatsapp_api.log'),
+            'level' => 'debug',
+        ],
     ],
 
 ];
