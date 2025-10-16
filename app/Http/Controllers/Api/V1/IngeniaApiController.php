@@ -29,7 +29,7 @@ class IngeniaApiController extends Controller
      * Inyecta el servicio de Ingenia para desacoplar la lógica de negocio
      * del controlador.
      *
-     * @param \App\Services\IngeniaApiService $ingeniaApiService El servicio que maneja la comunicación con la API de Ingenia.
+     * @param IngeniaApiService $ingeniaApiService El servicio que maneja la comunicación con la API de Ingenia.
      */
     public function __construct(private IngeniaApiService $ingeniaApiService)
     {
@@ -41,13 +41,12 @@ class IngeniaApiController extends Controller
      * Utiliza ConsultaCurpRequest para la validación automática. Si la validación
      * es exitosa, delega la consulta al servicio y formatea la respuesta.
      *
-     * @param  \App\Http\Requests\Api\V1\ConsultaCurpRequest  $request La petición validada que contiene la CURP.
-     * @return \Illuminate\Http\JsonResponse Una respuesta JSON con los datos del candidato o un mensaje de error.
+     * @param ConsultaCurpRequest  $request La petición validada que contiene la CURP.
+     * @return JsonResponse Una respuesta JSON con los datos del candidato o un mensaje de error.
      */
     public function consultarPorCurp(ConsultaCurpRequest $request): JsonResponse
     {
         try {
-            // La validación se ejecuta antes de que se llame a este método.
             $result = $this->ingeniaApiService->consultarPorCurp($request->validated()['curp']);
 
             if (!$result['success']) {
@@ -57,7 +56,6 @@ class IngeniaApiController extends Controller
             return $this->successResponse($result['data'], 'Consulta por CURP realizada con éxito.');
 
         } catch (Throwable $e) {
-            // Captura cualquier excepción inesperada durante el proceso.
             return $this->errorResponse('Error interno del servidor.', 500);
         }
     }
@@ -68,13 +66,12 @@ class IngeniaApiController extends Controller
      * Utiliza ObtenerCurpRequest para la validación automática. Si la validación
      * es exitosa, delega la obtención de la CURP al servicio y formatea la respuesta.
      *
-     * @param  \App\Http\Requests\Api\V1\ObtenerCurpRequest  $request La petición validada con los datos personales.
-     * @return \Illuminate\Http\JsonResponse Una respuesta JSON con la información de la CURP o un mensaje de error.
+     * @param ObtenerCurpRequest  $request La petición validada con los datos personales.
+     * @return JsonResponse Una respuesta JSON con la información de la CURP o un mensaje de error.
      */
     public function obtenerCurpPorDatos(ObtenerCurpRequest $request): JsonResponse
     {
         try {
-            // La validación se ejecuta antes de que se llame a este método.
             $result = $this->ingeniaApiService->obtenerCurpPorDatos($request->validated());
 
             if (!$result['success']) {
@@ -84,7 +81,6 @@ class IngeniaApiController extends Controller
             return $this->successResponse($result['data'], 'Obtención de CURP por datos realizada con éxito.');
 
         } catch (Throwable $e) {
-            // Captura cualquier excepción inesperada durante el proceso.
             return $this->errorResponse('Error interno del servidor.', 500);
         }
     }

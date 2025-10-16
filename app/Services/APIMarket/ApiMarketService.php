@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\APIMarket;
 
 use App\Models\RegistrosApiMarket;
 use Illuminate\Http\Client\RequestException;
@@ -15,7 +15,7 @@ use Throwable;
  * incluyendo el manejo de errores y el registro de auditoría para cada transacción.
  *
  * @package App\Services
- * @version 1.0.3
+ * @version 1.2.0
  */
 class ApiMarketService
 {
@@ -71,12 +71,11 @@ class ApiMarketService
 
             $responseData = $response->json() ?? [];
 
-            if ($response->successful()) {
-                $status = !empty($responseData['nss']) ? 'exitoso' : 'exitoso_sin_datos';
+            if ($responseData['success'] ?? false) {
+                $status = !empty($responseData['data']['nss']) ? 'exitoso' : 'exitoso_sin_datos';
                 return ['success' => true, 'data' => $responseData, 'status' => $response->status()];
             }
 
-            // Este bloque es redundante si se usa throw(), pero se mantiene por seguridad.
             $status = 'fallido';
             $message = $responseData['message'] ?? 'Respuesta no exitosa de ApiMarket.';
             return ['success' => false, 'message' => $message, 'status' => $response->status(), 'data' => $responseData];
@@ -110,18 +109,16 @@ class ApiMarketService
                 $request->withHeaders(['x-sandbox' => 'true']);
             }
 
-            // CORRECCIÓN: Se cambió de ->get() a ->post() para resolver el error 405 Method Not Allowed.
             $response = $request->post($this->baseUrl . $endpoint, $payload);
             $response->throw();
 
             $responseData = $response->json() ?? [];
 
-            if ($response->successful()) {
-                $status = !empty($responseData) ? 'exitoso' : 'exitoso_sin_datos';
+            if ($responseData['success'] ?? false) {
+                $status = !empty($responseData['data']) ? 'exitoso' : 'exitoso_sin_datos';
                 return ['success' => true, 'data' => $responseData, 'status' => $response->status()];
             }
 
-            // Redundante con throw(), pero se mantiene por seguridad.
             $status = 'fallido';
             $message = $responseData['message'] ?? 'Respuesta no exitosa de ApiMarket.';
             return ['success' => false, 'message' => $message, 'status' => $response->status(), 'data' => $responseData];
@@ -149,16 +146,20 @@ class ApiMarketService
         $identifier = $requestPayload['curp'] ?? $requestPayload['identificador'] ?? null;
 
         if ($identifier) {
-            // Verifica si el identificador parece ser un NSS (11 dígitos numéricos)
             if (strlen($identifier) === 11 && is_numeric($identifier)) {
                 $nss = $identifier;
-                // Intenta obtener la CURP desde la respuesta de la API de trayectoria
-                $curp = $responsePayload['data']['data']['curp'] ?? null;
             } else {
-                // Asume que es una CURP
                 $curp = $identifier;
-                // Intenta obtener el NSS desde la respuesta de la API de NSS o de trayectoria
-                $nss = $responsePayload['nss'] ?? ($responsePayload['data']['data']['nss'] ?? null);
+            }
+        }
+
+        if (str_starts_with($status, 'exitoso') && isset($responsePayload['data'])) {
+            $dataFromResponse = $responsePayload['data'];
+            if (!$curp) {
+                $curp = $dataFromResponse['curp'] ?? null;
+            }
+            if (!$nss) {
+                $nss = $dataFromResponse['nss'] ?? null;
             }
         }
 

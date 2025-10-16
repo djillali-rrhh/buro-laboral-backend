@@ -3,15 +3,14 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Services\ApiMarketService;
+use App\Http\Requests\Api\V1\ObtenerNssRequest;
+use App\Http\Requests\Api\V1\ObtenerTrayectoriaRequest;
+use App\Services\APIMarket\ApiMarketService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class ApiMarketController extends Controller
 {
-    // Usa el trait para tener acceso a los métodos successResponse y errorResponse.
     use ApiResponse;
 
     /**
@@ -31,24 +30,16 @@ class ApiMarketController extends Controller
 
     /**
      * Obtiene el NSS de un candidato a partir de su CURP.
+     * La validación se delega a ObtenerNssRequest.
      *
-     * @param Request $request
+     * @param ObtenerNssRequest $request
      * @return JsonResponse
      */
-    public function obtenerNSS(Request $request): JsonResponse
+    public function obtenerNSS(ObtenerNssRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'curp' => ['required', 'string', 'regex:/^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]{2}$/'],
-        ]);
-
-        if ($validator->fails()) {
-            return $this->errorResponse('Los datos proporcionados son inválidos.', 422, $validator->errors()->toArray());
-        }
-
-        $result = $this->apiMarketService->obtenerNSS($request->curp);
+        $result = $this->apiMarketService->obtenerNSS($request->validated()['curp']);
 
         if (!$result['success']) {
-            // Se obtiene el código de estado del servicio, o se usa 500 por defecto.
             $statusCode = $result['status'] ?? 500;
             return $this->errorResponse($result['message'] ?? 'Error al consultar el servicio de NSS.', $statusCode);
         }
@@ -63,22 +54,19 @@ class ApiMarketController extends Controller
 
     /**
      * Obtiene la trayectoria laboral de un candidato a partir de su NSS o CURP.
+     * La validación se delega a ObtenerTrayectoriaRequest.
      *
-     * @param Request $request
+     * @param ObtenerTrayectoriaRequest $request
      * @return JsonResponse
      */
-    public function obtenerTrayectoria(Request $request): JsonResponse
+    public function obtenerTrayectoria(ObtenerTrayectoriaRequest $request): JsonResponse
     {
-        $identifier = $request->input('nss', $request->input('curp'));
-
-        if (!$identifier) {
-            return $this->errorResponse('Se requiere un NSS o CURP.', 422);
-        }
+        $validatedData = $request->validated();
+        $identifier = $validatedData['nss'] ?? $validatedData['curp'];
 
         $result = $this->apiMarketService->obtenerTrayectoriaLaboral($identifier);
 
         if (!$result['success']) {
-            // Se obtiene el código de estado del servicio, o se usa 500 por defecto.
             $statusCode = $result['status'] ?? 500;
             return $this->errorResponse($result['message'] ?? 'Error al consultar la trayectoria laboral.', $statusCode);
         }
