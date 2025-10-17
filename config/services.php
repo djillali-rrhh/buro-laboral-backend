@@ -49,6 +49,14 @@ return [
         'webhook_key' => env('BURO_INGRESOS_WEBHOOK_KEY'),
         'base_url' => env('BURO_INGRESOS_API_BASE_URL'),
         'sandbox_mode' => env('BURO_INGRESOS_SANDBOX_MODE', true),
+
+    ],
+    
+    'sendgrid' => [
+        'key' => env('SENDGRID_API_KEY'),
+        'sandbox' => env('SENDGRID_SANDBOX_MODE', true),
+    ],
+];
     ],   
 
     'apimarket' => [
@@ -65,3 +73,4 @@ return [
         'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
     ],
 ];
+
