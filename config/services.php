@@ -64,5 +64,13 @@ return [
         'token' => env('APIMARKET_TOKEN'),
         'sandbox' => env('APIMARKET_SANDBOX', false),
     ],
+
+    'whatsapp' => [
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN'),
+        'api_base' => env('WHATSAPP_API_BASE', 'https://graph.facebook.com/v20.0'),
+        'business_account_id' => env('WHATSAPP_BUSINESS_ACCOUNT_ID'),
+    ],
 ];
 
